@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import Chatbot from '../components/Chatbot';
+import OCRSection from '../components/Chatbot';
+import IrisModal from '../components/IrisModal'; // NEW: Import iris modal
+import IrisDetector from '../utils/irisDetection'; // NEW: Import iris detector
 
 function useMatrixEffect() {
   useEffect(() => {
@@ -159,7 +161,6 @@ function PasswordStrength({ value }) {
   );
 }
 
-// Helpers for backup/restore encoding
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 const toHex = (buf) => Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -167,7 +168,6 @@ const fromHex = (hex) => new Uint8Array(hex.match(/.{1,2}/g).map(h => parseInt(h
 const toB64 = (u8) => btoa(String.fromCharCode(...u8));
 const fromB64 = (b64) => new Uint8Array(atob(b64).split('').map(c => c.charCodeAt(0)));
 
-// IndexedDB helpers for storing large encrypted file data
 const DB_NAME = 'cybervaultDB';
 const DB_STORE = 'files';
 function idbOpen() {
@@ -206,7 +206,6 @@ function idbDelete(key) {
   }));
 }
 
-// Face recognition support using face-api.js via CDN
 async function loadFaceApi() {
   if (window.faceapi) return window.faceapi;
   await new Promise((resolve, reject) => {
@@ -283,7 +282,7 @@ function FaceModal({ mode, open, onClose, onRegistered, onAuthenticated }) {
                   samples.push(Array.from(res.descriptor));
                 }
 
-                if (samples.length >= 5) { // Increased sample size to 5
+                if (samples.length >= 3) {
                   clearInterval(detectionInterval);
                   const len = samples[0].length;
                   const avg = new Array(len).fill(0);
@@ -359,54 +358,51 @@ function PasswordModal({ open, onClose, onConfirm, value, onChange }) {
 }
 
 function App() {
-  // useMatrixEffect();
-  // useCursorGlow();
   useEasterEgg();
   const { session, saveSession, clearSession } = useSession();
 
-  const [page, setPage] = useState('greeting'); // 'greeting', 'login' | 'vault'
-  const [mode, setMode] = useState('login'); // login/signup
+  const [page, setPage] = useState('greeting');
+  const [mode, setMode] = useState('login');
   const [loading, setLoading] = useState({ visible: false, message: '' });
 
-  // Login state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
-  // Signup state
   const [signupUsername, setSignupUsername] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
-  const [emailStatus, setEmailStatus] = useState('idle'); // idle, validating, valid, invalid
+  const [emailStatus, setEmailStatus] = useState('idle');
   const [signupPassword, setSignupPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [signupNeuralPin, setSignupNeuralPin] = useState('');
 
-  // Vault state
   const [files, setFiles] = useState(() => {
     try { return JSON.parse(localStorage.getItem('cyberVaultFiles') || '[]'); } catch { return []; }
   });
   const [masterPassword, setMasterPassword] = useState('');
 
-  // Viewer state
   const [viewingFile, setViewingFile] = useState(null);
   const [viewingFileContent, setViewingFileContent] = useState(null);
   const [viewingFilePin, setViewingFilePin] = useState('');
 
-  // Locking
   const [locked, setLocked] = useState(false);
   const [lockInput, setLockInput] = useState('');
-  const autoLockMs = 5 * 60 * 1000; // 5 minutes
+  const autoLockMs = 5 * 60 * 1000;
 
-  // Search/filter
   const [query, setQuery] = useState('');
 
-  // Face modal
   const [faceModalOpen, setFaceModalOpen] = useState(false);
-  const [faceMode, setFaceMode] = useState('register'); // 'register' | 'login'
-  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+  const [faceMode, setFaceMode] = useState('register');
+  const [isOCRSectionOpen, setIsOCRSectionOpen] = useState(false);
   const signupFaceResolveRef = useRef(null);
   const loginFaceResolveRef = useRef(null);
 
-  // Email validation
+  // NEW: Iris-related state
+  const [irisModalOpen, setIrisModalOpen] = useState(false);
+  const [irisMode, setIrisMode] = useState('register');
+  const signupIrisResolveRef = useRef(null);
+  const loginIrisResolveRef = useRef(null);
+  const [irisDetector] = useState(() => new IrisDetector());
+
   useEffect(() => {
     if (mode !== 'signup') return;
     const handler = setTimeout(() => {
@@ -424,7 +420,6 @@ function App() {
     };
   }, [signupEmail, mode]);
 
-  // Restore session on mount
   useEffect(() => {
     if (session && session.email && session.loginTime) {
       const loginTime = new Date(session.loginTime);
@@ -435,14 +430,12 @@ function App() {
         if (session.masterPassword) setMasterPassword(session.masterPassword);
       }
     }
-  }, []); // eslint-disable-line
+  }, []);
 
-  // Persist files
   useEffect(() => {
     try { localStorage.setItem('cyberVaultFiles', JSON.stringify(files)); } catch {}
   }, [files]);
 
-  // Auto-lock inactivity timer
   useEffect(() => {
     if (page !== 'vault') return;
     let timer;
@@ -469,7 +462,6 @@ function App() {
   function showLoading(message) { setLoading({ visible: true, message }); }
   function hideLoading() { setLoading({ visible: false, message: '' }); }
 
-  // On-demand master password modal flow
   const [pwdModalOpen, setPwdModalOpen] = useState(false);
   const [pwdInput, setPwdInput] = useState('');
   const pwdResolveRef = useRef(null);
@@ -566,12 +558,71 @@ function App() {
     setFaceModalOpen(false);
   }
 
+  // NEW: Iris functions
+  async function startIrisRegistration() {
+    try {
+      await irisDetector.initialize();
+    } catch (e) {
+      showNotification('> iris.module.load.failed', 'error');
+      throw e;
+    }
+    return new Promise((resolve, reject) => {
+      signupIrisResolveRef.current = { resolve, reject };
+      setIrisMode('register');
+      setIrisModalOpen(true);
+    });
+  }
+
+  async function startIrisLogin() {
+    try {
+      await irisDetector.initialize();
+    } catch (e) {
+      showNotification('> iris.module.load.failed', 'error');
+      throw e;
+    }
+    return new Promise((resolve, reject) => {
+      loginIrisResolveRef.current = { resolve, reject };
+      setIrisMode('login');
+      setIrisModalOpen(true);
+    });
+  }
+
+  function onIrisRegistered(irisTemplate) {
+    if (signupIrisResolveRef.current) {
+      signupIrisResolveRef.current.resolve(irisTemplate);
+      signupIrisResolveRef.current = null;
+    }
+  }
+
+  function onIrisAuthenticated(irisTemplate) {
+    if (loginIrisResolveRef.current) {
+      loginIrisResolveRef.current.resolve(irisTemplate);
+      loginIrisResolveRef.current = null;
+    }
+  }
+
+  function closeIrisModal() {
+    if (signupIrisResolveRef.current) { 
+      signupIrisResolveRef.current.reject(new Error('cancelled')); 
+      signupIrisResolveRef.current = null; 
+    }
+    if (loginIrisResolveRef.current) { 
+      loginIrisResolveRef.current.reject(new Error('cancelled')); 
+      loginIrisResolveRef.current = null; 
+    }
+    setIrisModalOpen(false);
+  }
+
+  function compareIrisTemplates(template1, template2) {
+    return irisDetector.compareIrisTemplates(template1, template2, 0.75);
+  }
+
   function euclidean(a, b) {
     if (!a || !b || a.length !== b.length) return Infinity;
     let sum = 0;
     for (let i = 0; i < a.length; i++) { const d = a[i] - b[i]; sum += d * d; }
     return Math.sqrt(sum);
-    }
+  }
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -605,7 +656,7 @@ function App() {
       if (!stored.email || !stored.faceDescriptor) { showNotification('> face.login.not.registered', 'error'); return; }
       const liveDesc = await startFaceLogin();
       const dist = euclidean(liveDesc, stored.faceDescriptor);
-      if (dist <= 0.4) {
+      if (dist <= 0.35) {
         showNotification('> neural.face.link.established', 'success');
         const s = { email: stored.email, username: stored.username, loginTime: new Date().toISOString() };
         saveSession(s);
@@ -615,6 +666,36 @@ function App() {
       }
     } catch (e) {
       showNotification('> face.login.cancelled', 'info');
+    }
+  }
+
+  // NEW: Iris login handler
+  async function handleIrisLogin() {
+    try {
+      if (!loginEmail) { 
+        showNotification('> enter.email.for.iris.login', 'error'); 
+        return; 
+      }
+      
+      const stored = JSON.parse(localStorage.getItem('neuralUser_' + loginEmail) || '{}');
+      if (!stored.email || !stored.irisTemplate) { 
+        showNotification('> iris.login.not.registered', 'error'); 
+        return; 
+      }
+      
+      const liveIrisTemplate = await startIrisLogin();
+      const isMatch = compareIrisTemplates(liveIrisTemplate, stored.irisTemplate);
+      
+      if (isMatch) {
+        showNotification('> neural.iris.link.established', 'success');
+        const s = { email: stored.email, username: stored.username, loginTime: new Date().toISOString() };
+        saveSession(s);
+        setPage('vault');
+      } else {
+        showNotification('> iris.mismatch.authentication.failed', 'error');
+      }
+    } catch (e) {
+      showNotification('> iris.login.cancelled', 'info');
     }
   }
 
@@ -646,18 +727,32 @@ function App() {
       await simulateNetworkDelay(800);
       if (localStorage.getItem('neuralUser_' + signupEmail)) throw new Error('exists');
 
-      // Require facial registration
       hideLoading();
-      showNotification('> begin.facial.registration', 'info');
+      showNotification('> begin.biometric.registration', 'info');
+      
+      // Collect face data
       const faceDescriptor = await startFaceRegistration();
+      
+      // NEW: Collect iris data
+      showNotification('> begin.iris.registration', 'info');
+      const irisTemplate = await startIrisRegistration();
 
       showLoading('> finalizing.profile');
       const salt = generateSaltHex();
       const passwordHash = await hashPassword(signupPassword, salt);
-      const userData = { username: signupUsername, email: signupEmail, passwordHash, salt, neuralPin: signupNeuralPin, createdAt: new Date().toISOString(), faceDescriptor };
+      const userData = { 
+        username: signupUsername, 
+        email: signupEmail, 
+        passwordHash, 
+        salt, 
+        neuralPin: signupNeuralPin, 
+        createdAt: new Date().toISOString(), 
+        faceDescriptor,
+        irisTemplate // NEW: Store iris template
+      };
       localStorage.setItem('neuralUser_' + signupEmail, JSON.stringify(userData));
       hideLoading();
-      showNotification('> neural.profile.created.with.face', 'success');
+      showNotification('> neural.profile.created.with.biometrics', 'success');
       setTimeout(() => {
         setMode('login');
         setLoginEmail(signupEmail);
@@ -668,7 +763,7 @@ function App() {
       if (err && err.message === 'exists') {
         showNotification('> neural.profile.creation.failed || signature.exists', 'error');
       } else if (err && err.message === 'cancelled') {
-        showNotification('> facial.registration.cancelled', 'error');
+        showNotification('> biometric.registration.cancelled', 'error');
       } else {
         showNotification('> neural.profile.creation.failed', 'error');
       }
@@ -812,7 +907,6 @@ function App() {
     }
   }
 
-  // Backup: export entire vault (files array) encrypted with current masterPassword
   async function backupVault() {
     try {
       let pwd = masterPassword;
@@ -857,7 +951,6 @@ function App() {
       const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cbytes);
       const { files: restored } = JSON.parse(dec.decode(new Uint8Array(plain)));
       if (!Array.isArray(restored)) throw new Error('invalid.payload');
-      // Merge by unique combination of name+size+checksum
       const map = new Map(files.map(f => [f.name + '|' + f.size + '|' + f.checksum, f]));
       for (const rf of restored) {
         const k = rf.name + '|' + rf.size + '|' + rf.checksum;
@@ -891,7 +984,6 @@ function App() {
     const pwd = lockInput;
     if (!pwd || pwd.length < 8) { showNotification('> neural.key.insufficient.minimum_8_chars', 'error'); return; }
 
-    // Fast-path if session has masterPassword
     if (session?.masterPassword && pwd === session.masterPassword) {
       setMasterPassword(pwd);
       setLocked(false);
@@ -900,14 +992,12 @@ function App() {
       return;
     }
 
-    // Validate against stored user hash to support unlocking after face login
     try {
       const stored = JSON.parse(localStorage.getItem('neuralUser_' + session?.email) || '{}');
       if (stored?.passwordHash && stored?.salt && await verifyPassword(pwd, stored.passwordHash, stored.salt)) {
         setMasterPassword(pwd);
         setLocked(false);
         setLockInput('');
-        // persist in session for subsequent quick unlocks
         saveSession({ ...(session || {}), masterPassword: pwd });
         showNotification('> neural.vault.unlocked', 'success');
       } else {
@@ -919,22 +1009,42 @@ function App() {
   }
   
   async function attemptFaceUnlock() {
-  try {
-  const email = session?.email;
-  if (!email) { showNotification('> no.active.session', 'error'); return; }
-  const stored = JSON.parse(localStorage.getItem('neuralUser_' + email) || '{}');
-  if (!stored.email || !stored.faceDescriptor) { showNotification('> face.login.not.registered', 'error'); return; }
-  const liveDesc = await startFaceLogin();
-  const dist = euclidean(liveDesc, stored.faceDescriptor);
-  if (dist <= 0.4) {
-  setLocked(false);
-  showNotification('> neural.vault.unlocked.via.face', 'success');
-  } else {
-  showNotification('> face.mismatch.authentication.failed', 'error');
+    try {
+      const email = session?.email;
+      if (!email) { showNotification('> no.active.session', 'error'); return; }
+      const stored = JSON.parse(localStorage.getItem('neuralUser_' + email) || '{}');
+      if (!stored.email || !stored.faceDescriptor) { showNotification('> face.login.not.registered', 'error'); return; }
+      const liveDesc = await startFaceLogin();
+      const dist = euclidean(liveDesc, stored.faceDescriptor);
+      if (dist <= 0.35) {
+        setLocked(false);
+        showNotification('> neural.vault.unlocked.via.face', 'success');
+      } else {
+        showNotification('> face.mismatch.authentication.failed', 'error');
+      }
+    } catch (e) {
+      showNotification('> face.unlock.cancelled', 'info');
+    }
   }
-  } catch (e) {
-  showNotification('> face.unlock.cancelled', 'info');
-  }
+
+  // NEW: Iris unlock function
+  async function attemptIrisUnlock() {
+    try {
+      const email = session?.email;
+      if (!email) { showNotification('> no.active.session', 'error'); return; }
+      const stored = JSON.parse(localStorage.getItem('neuralUser_' + email) || '{}');
+      if (!stored.email || !stored.irisTemplate) { showNotification('> iris.login.not.registered', 'error'); return; }
+      const liveIrisTemplate = await startIrisLogin();
+      const isMatch = compareIrisTemplates(liveIrisTemplate, stored.irisTemplate);
+      if (isMatch) {
+        setLocked(false);
+        showNotification('> neural.vault.unlocked.via.iris', 'success');
+      } else {
+        showNotification('> iris.mismatch.authentication.failed', 'error');
+      }
+    } catch (e) {
+      showNotification('> iris.unlock.cancelled', 'info');
+    }
   }
   
   const fileInputRef = useRef(null);
@@ -1026,11 +1136,8 @@ function App() {
     );
   }
 
-  
-
   return (
     <div>
-      {/* Greeting Page */}
       {page === 'greeting' && (
         <div className="login-page" id="greetingPage">
           <div className="auth-container">
@@ -1048,7 +1155,6 @@ function App() {
         </div>
       )}
 
-      {/* Login Page */}
       {page === 'login' && (
         <div className="login-page" id="loginPage">
           <div className="auth-container">
@@ -1073,9 +1179,13 @@ function App() {
                     <label className="form-label">🛡️ Master Password</label>
                     <input type="password" className="form-input" id="loginPassword" placeholder="Enter quantum passphrase..." required value={loginPassword} onChange={e => setLoginPassword(e.target.value)} />
                   </div>
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    <button type="submit" className="submit-btn" style={{ flex: 1 }}>🚀 Password Login</button>
-                    <button type="button" className="cyber-btn btn-primary" style={{ flex: 1 }} onClick={handleFaceLogin}>🧠 Face Login</button>
+                  {/* NEW: Updated login buttons with iris option */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <button type="submit" className="submit-btn">🚀 Password Login</button>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button type="button" className="cyber-btn btn-primary" style={{ flex: 1 }} onClick={handleFaceLogin}>🧠 Face</button>
+                      <button type="button" className="cyber-btn btn-primary" style={{ flex: 1 }} onClick={handleIrisLogin}>👁️ Iris</button>
+                    </div>
                   </div>
                 </form>
               ) : (
@@ -1126,7 +1236,8 @@ function App() {
                       PIN Status: {/^\d{3}$/.test(signupNeuralPin) ? 'Valid' : 'Must be exactly 3 digits (0-9)'}
                     </div>
                   </div>
-                  <button type="submit" className="submit-btn">⚡ Create Neural Profile (Face Required)</button>
+                  {/* NEW: Updated signup button text */}
+                  <button type="submit" className="submit-btn">⚡ Create Profile (Face + Iris Required)</button>
                 </form>
               )}
 
@@ -1136,7 +1247,7 @@ function App() {
                   <li>AES-256 quantum-resistant encryption</li>
                   <li>Neural key derivation (PBKDF2-SHA256)</li>
                   <li>Zero-knowledge architecture</li>
-                  <li>Biometric (face) authentication option</li>
+                  <li>Multi-modal biometric authentication (Face + Iris)</li>
                   <li>Quantum-safe password hashing</li>
                 </ul>
               </div>
@@ -1145,7 +1256,6 @@ function App() {
         </div>
       )}
 
-      {/* Main Vault */}
       {page === 'vault' && (
         <div className="main-vault" id="mainVault" style={{ display: 'block' }}>
           <div className="container">
@@ -1165,37 +1275,35 @@ function App() {
               <div className="sidebar" style={{ display: 'flex', flexDirection: 'column' }}>
                 <div style={{ flex: 1, overflowY: 'auto' }}>
                   <div className="security-badge">
-                  <h4>🛡️ Quantum Security</h4>
-                  <p>AES-256 neural encryption with quantum-resistant protocols. Zero-knowledge architecture.</p>
-                </div>
+                    <h4>🛡️ Quantum Security</h4>
+                    <p>AES-256 neural encryption with quantum-resistant protocols. Zero-knowledge architecture.</p>
+                  </div>
 
-                <div className="cyber-section">
-                  <div className="neural-stats">
-                    <div className="neural-stat">
-                      <span className="stat-number" id="fileCount">{fileCount}</span>
-                      <span className="stat-label">Files</span>
-                    </div>
-                    <div className="neural-stat">
-                      <span className="stat-number" id="totalSize">{formatFileSize(totalBytes)}</span>
-                      <span className="stat-label">Storage</span>
+                  <div className="cyber-section">
+                    <div className="neural-stats">
+                      <div className="neural-stat">
+                        <span className="stat-number" id="fileCount">{fileCount}</span>
+                        <span className="stat-label">Files</span>
+                      </div>
+                      <div className="neural-stat">
+                        <span className="stat-number" id="totalSize">{formatFileSize(totalBytes)}</span>
+                        <span className="stat-label">Storage</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                
-                <div className="cyber-section" style={{ display: 'grid', gap: 10 }}>
-                  <button className="cyber-btn btn-secondary" onClick={() => setIsChatbotOpen(true)}>⚡ THOR</button>
-                  <button className="cyber-btn btn-secondary" onClick={manualLock}>🔒 Lock Vault</button>
-                  <button className="cyber-btn btn-primary" onClick={backupVault}>⬇️ Backup Vault</button>
-                  <button className="cyber-btn btn-secondary" onClick={() => restoreInputRef.current?.click()}>⬆️ Restore Vault</button>
-                  <input type="file" ref={restoreInputRef} accept=".cybvlt,application/json" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) restoreVaultFromFile(f); e.target.value = ''; }} />
-                </div>
+                  <div className="cyber-section" style={{ display: 'grid', gap: 10 }}>
+                    <button className="cyber-btn btn-secondary" onClick={() => setIsOCRSectionOpen(true)}>📝 OCR</button>
+                    <button className="cyber-btn btn-secondary" onClick={manualLock}>🔒 Lock Vault</button>
+                    <button className="cyber-btn btn-primary" onClick={backupVault}>⬇️ Backup Vault</button>
+                    <button className="cyber-btn btn-secondary" onClick={() => restoreInputRef.current?.click()}>⬆️ Restore Vault</button>
+                    <input type="file" ref={restoreInputRef} accept=".cybvlt,application/json" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) restoreVaultFromFile(f); e.target.value = ''; }} />
+                  </div>
 
-                <div className="cyber-section">
-                  <h3>🔎 Search</h3>
-                  <input type="text" className="password-input" placeholder="Filter by file name..." value={query} onChange={e => setQuery(e.target.value)} />
-                </div>
-
+                  <div className="cyber-section">
+                    <h3>🔎 Search</h3>
+                    <input type="text" className="password-input" placeholder="Filter by file name..." value={query} onChange={e => setQuery(e.target.value)} />
+                  </div>
                 </div>
                 <button className="cyber-btn btn-danger" onClick={clearAllFiles} style={{ width: '100%', marginTop: 10 }}>
                   🗑️ Purge All Data
@@ -1244,7 +1352,6 @@ function App() {
         </div>
       )}
 
-      {/* Loading overlay */}
       {loading.visible && (
         <div className="loading active" id="loadingOverlay">
           <div>
@@ -1254,7 +1361,6 @@ function App() {
         </div>
       )}
 
-      {/* Lock overlay */}
       {locked && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: 'linear-gradient(145deg, var(--glass-bg), rgba(15, 15, 25, 0.95))', border: '1px solid var(--border-glow)', borderRadius: 16, padding: 24, width: 360, boxShadow: '0 0 50px rgba(0, 212, 255, 0.2)' }}>
@@ -1264,14 +1370,15 @@ function App() {
               <input type="password" className="password-input" placeholder="Enter quantum passphrase..." value={lockInput} onChange={e => setLockInput(e.target.value)} />
               <button type="submit" className="submit-btn" style={{ marginTop: 12 }}>🔓 Unlock</button>
             </form>
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
-              <button type="button" className="cyber-btn btn-primary" onClick={attemptFaceUnlock}>🧠 Face Unlock</button>
+            {/* NEW: Added iris unlock option */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 8 }}>
+              <button type="button" className="cyber-btn btn-primary" onClick={attemptFaceUnlock}>🧠 Face</button>
+              <button type="button" className="cyber-btn btn-primary" onClick={attemptIrisUnlock}>👁️ Iris</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* File Viewer Modal */}
       {viewingFile && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: '#ffffff', color: '#111827', border: '1px solid #e5e7eb', borderRadius: 16, padding: 24, width: '80vw', maxWidth: 1000, boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
@@ -1299,7 +1406,6 @@ function App() {
         </div>
       )}
 
-      {/* Password modal (on-demand) */}
       <PasswordModal
         open={pwdModalOpen}
         onClose={onPwdClose}
@@ -1308,7 +1414,6 @@ function App() {
         onChange={e => setPwdInput(e.target.value)}
       />
 
-      {/* Face modal */}
       <FaceModal
         mode={faceMode}
         open={faceModalOpen}
@@ -1317,11 +1422,19 @@ function App() {
         onAuthenticated={onFaceAuthenticated}
       />
 
-      {/* Chatbot modal */}
-      <Chatbot
+      {/* NEW: Iris Modal */}
+      <IrisModal
+        mode={irisMode}
+        open={irisModalOpen}
+        onClose={closeIrisModal}
+        onRegistered={onIrisRegistered}
+        onAuthenticated={onIrisAuthenticated}
+      />
+
+      <OCRSection
         files={files}
-        open={isChatbotOpen}
-        onClose={() => setIsChatbotOpen(false)}
+        open={isOCRSectionOpen}
+        onClose={() => setIsOCRSectionOpen(false)}
         idbGet={idbGet}
         deriveQuantumKey={deriveQuantumKey}
         enc={enc}
