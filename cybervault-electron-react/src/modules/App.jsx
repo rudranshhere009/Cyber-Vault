@@ -1312,10 +1312,10 @@ function App() {
                   {/* NEW: Updated login buttons with all biometric options */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <button type="submit" className="submit-btn">🚀 Password Login</button>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <button type="button" className="cyber-btn btn-primary" style={{ flex: 1 }} onClick={handleFaceLogin}>🧠 Face</button>
-                      <button type="button" className="cyber-btn btn-primary" style={{ flex: 1 }} onClick={handleIrisLogin}>👁️ Iris</button>
-                      <button type="button" className="cyber-btn btn-primary" style={{ flex: 1 }} onClick={handleFingerprintLogin}>👆 Fingerprint</button>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <button type="button" className="cyber-btn btn-primary" style={{ flex: '1 1 auto', minWidth: '80px' }} onClick={handleFaceLogin}>🧠 Face</button>
+                      <button type="button" className="cyber-btn btn-primary" style={{ flex: '1 1 auto', minWidth: '80px' }} onClick={handleIrisLogin}>👁️ Iris</button>
+                      <button type="button" className="cyber-btn btn-primary" style={{ flex: '1 1 auto', minWidth: '120px' }} onClick={handleFingerprintLogin}>👆 Fingerprint</button>
                     </div>
                   </div>
                 </form>
@@ -1502,10 +1502,10 @@ function App() {
               <button type="submit" className="submit-btn" style={{ marginTop: 12 }}>🔓 Unlock</button>
             </form>
             {/* NEW: Added all biometric unlock options */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 8 }}>
-              <button type="button" className="cyber-btn btn-primary" onClick={attemptFaceUnlock}>🧠 Face</button>
-              <button type="button" className="cyber-btn btn-primary" onClick={attemptIrisUnlock}>👁️ Iris</button>
-              <button type="button" className="cyber-btn btn-primary" onClick={attemptFingerprintUnlock}>👆 Fingerprint</button>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+              <button type="button" className="cyber-btn btn-primary" style={{ minWidth: '80px' }} onClick={attemptFaceUnlock}>🧠 Face</button>
+              <button type="button" className="cyber-btn btn-primary" style={{ minWidth: '80px' }} onClick={attemptIrisUnlock}>👁️ Iris</button>
+              <button type="button" className="cyber-btn btn-primary" style={{ minWidth: '120px' }} onClick={attemptFingerprintUnlock}>👆 Fingerprint</button>
             </div>
           </div>
         </div>
