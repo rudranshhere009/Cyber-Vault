@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import OCRSection from '../components/Chatbot';
 import IrisModal from '../components/IrisModal'; // NEW: Import iris modal
 import IrisDetector from '../utils/irisDetection'; // NEW: Import iris detector
+import FingerprintAuth from '../components/FingerprintAuth'; // NEW: Import fingerprint auth
 
 function useMatrixEffect() {
   useEffect(() => {
@@ -402,6 +403,10 @@ function App() {
   const signupIrisResolveRef = useRef(null);
   const loginIrisResolveRef = useRef(null);
   const [irisDetector] = useState(() => new IrisDetector());
+  
+  // NEW: Fingerprint auth states
+  const [fingerprintModalOpen, setFingerprintModalOpen] = useState(false);
+  const [fingerprintModalData, setFingerprintModalData] = useState(null);
 
   useEffect(() => {
     if (mode !== 'signup') return;
@@ -699,6 +704,60 @@ function App() {
     }
   }
 
+  // NEW: Fingerprint login handler
+  async function handleFingerprintLogin() {
+    console.log('Fingerprint login clicked!'); // DEBUG
+    showNotification('> fingerprint.login.clicked', 'info'); // DEBUG
+    try {
+      if (!loginEmail) { 
+        showNotification('> enter.email.for.fingerprint.login', 'error'); 
+        return; 
+      }
+      
+      const stored = JSON.parse(localStorage.getItem('neuralUser_' + loginEmail) || '{}');
+      if (!stored.email) { 
+        showNotification('> user.not.registered', 'error'); 
+        return; 
+      }
+
+      // Use stored password as master password for credential store access
+      if (!stored.passwordHash) {
+        showNotification('> fingerprint.login.setup.incomplete', 'error');
+        return;
+      }
+
+      showNotification('> initializing.fingerprint.authentication', 'info');
+      
+      // We'll show a simple fingerprint auth modal here
+      const result = await new Promise((resolve, reject) => {
+        setFingerprintModalData({
+          email: loginEmail,
+          mode: 'login',
+          resolve,
+          reject
+        });
+        setFingerprintModalOpen(true);
+      });
+
+      if (result && result.type === 'authentication') {
+        showNotification('> neural.fingerprint.link.established', 'success');
+        const s = { 
+          email: stored.email, 
+          username: stored.username, 
+          loginTime: new Date().toISOString(),
+          masterPassword: loginPassword // Use the password they'd normally enter
+        };
+        saveSession(s);
+        setPage('vault');
+      }
+      
+    } catch (e) {
+      if (e.message !== 'cancelled') {
+        showNotification('> fingerprint.login.failed', 'error');
+      }
+    }
+  }
+
   async function handleSignup(e) {
     e.preventDefault();
     if (emailStatus !== 'valid') {
@@ -737,6 +796,30 @@ function App() {
       showNotification('> begin.iris.registration', 'info');
       const irisTemplate = await startIrisRegistration();
 
+      // NEW: Collect fingerprint data (optional - continues even if fails)
+      let fingerprintRegistered = false;
+      try {
+        showNotification('> begin.fingerprint.registration', 'info');
+        const fingerprintResult = await new Promise((resolve, reject) => {
+          setFingerprintModalData({
+            email: signupEmail,
+            mode: 'register',
+            masterPassword: signupPassword,
+            resolve,
+            reject
+          });
+          setFingerprintModalOpen(true);
+        });
+        
+        if (fingerprintResult && fingerprintResult.type === 'registration') {
+          fingerprintRegistered = true;
+          showNotification('> fingerprint.registration.completed', 'success');
+        }
+      } catch (fingerprintError) {
+        showNotification('> fingerprint.registration.skipped', 'info');
+        // Continue with registration even if fingerprint fails
+      }
+
       showLoading('> finalizing.profile');
       const salt = generateSaltHex();
       const passwordHash = await hashPassword(signupPassword, salt);
@@ -748,11 +831,14 @@ function App() {
         neuralPin: signupNeuralPin, 
         createdAt: new Date().toISOString(), 
         faceDescriptor,
-        irisTemplate // NEW: Store iris template
+        irisTemplate, // NEW: Store iris template
+        fingerprintEnabled: fingerprintRegistered // NEW: Track if fingerprint was registered
       };
       localStorage.setItem('neuralUser_' + signupEmail, JSON.stringify(userData));
       hideLoading();
-      showNotification('> neural.profile.created.with.biometrics', 'success');
+      
+      const biometricCount = 2 + (fingerprintRegistered ? 1 : 0); // face + iris + optional fingerprint
+      showNotification(`> neural.profile.created.with.${biometricCount}.biometric.factors`, 'success');
       setTimeout(() => {
         setMode('login');
         setLoginEmail(signupEmail);
@@ -773,8 +859,17 @@ function App() {
   function logout() {
     if (confirm('> confirm.neural.link.termination\n\nYou will be logged out and redirected to the login page.')) {
       clearSession();
+      setPage('login');
+      setMode('login');
+      setLocked(false);
+      // Reset form states
+      setLoginEmail('');
+      setLoginPassword('');
+      setSignupEmail('');
+      setSignupPassword('');
+      setMasterPassword('');
+      setFiles([]);
       window.electronAPI.forceRepaint();
-      window.location.reload();
     }
   }
 
@@ -1046,6 +1141,41 @@ function App() {
       showNotification('> iris.unlock.cancelled', 'info');
     }
   }
+
+  // NEW: Fingerprint unlock function
+  async function attemptFingerprintUnlock() {
+    try {
+      const email = session?.email;
+      if (!email) { showNotification('> no.active.session', 'error'); return; }
+      
+      // For unlock, we use the session's master password if available
+      const masterPwd = session?.masterPassword || masterPassword;
+      if (!masterPwd) { 
+        showNotification('> master.password.required.for.fingerprint.unlock', 'error'); 
+        return; 
+      }
+
+      const result = await new Promise((resolve, reject) => {
+        setFingerprintModalData({
+          email,
+          mode: 'unlock',
+          masterPassword: masterPwd,
+          resolve,
+          reject
+        });
+        setFingerprintModalOpen(true);
+      });
+
+      if (result && result.type === 'authentication') {
+        setLocked(false);
+        showNotification('> neural.vault.unlocked.via.fingerprint', 'success');
+      }
+    } catch (e) {
+      if (e.message !== 'cancelled') {
+        showNotification('> fingerprint.unlock.failed', 'error');
+      }
+    }
+  }
   
   const fileInputRef = useRef(null);
 
@@ -1179,12 +1309,13 @@ function App() {
                     <label className="form-label">🛡️ Master Password</label>
                     <input type="password" className="form-input" id="loginPassword" placeholder="Enter quantum passphrase..." required value={loginPassword} onChange={e => setLoginPassword(e.target.value)} />
                   </div>
-                  {/* NEW: Updated login buttons with iris option */}
+                  {/* NEW: Updated login buttons with all biometric options */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <button type="submit" className="submit-btn">🚀 Password Login</button>
                     <div style={{ display: 'flex', gap: 10 }}>
                       <button type="button" className="cyber-btn btn-primary" style={{ flex: 1 }} onClick={handleFaceLogin}>🧠 Face</button>
                       <button type="button" className="cyber-btn btn-primary" style={{ flex: 1 }} onClick={handleIrisLogin}>👁️ Iris</button>
+                      <button type="button" className="cyber-btn btn-primary" style={{ flex: 1 }} onClick={handleFingerprintLogin}>👆 Fingerprint</button>
                     </div>
                   </div>
                 </form>
@@ -1237,7 +1368,7 @@ function App() {
                     </div>
                   </div>
                   {/* NEW: Updated signup button text */}
-                  <button type="submit" className="submit-btn">⚡ Create Profile (Face + Iris Required)</button>
+                  <button type="submit" className="submit-btn">⚡ Create Profile (Face + Iris + Fingerprint)</button>
                 </form>
               )}
 
@@ -1247,7 +1378,7 @@ function App() {
                   <li>AES-256 quantum-resistant encryption</li>
                   <li>Neural key derivation (PBKDF2-SHA256)</li>
                   <li>Zero-knowledge architecture</li>
-                  <li>Multi-modal biometric authentication (Face + Iris)</li>
+                  <li>Multi-modal biometric authentication (Face + Iris + Fingerprint)</li>
                   <li>Quantum-safe password hashing</li>
                 </ul>
               </div>
@@ -1370,10 +1501,11 @@ function App() {
               <input type="password" className="password-input" placeholder="Enter quantum passphrase..." value={lockInput} onChange={e => setLockInput(e.target.value)} />
               <button type="submit" className="submit-btn" style={{ marginTop: 12 }}>🔓 Unlock</button>
             </form>
-            {/* NEW: Added iris unlock option */}
+            {/* NEW: Added all biometric unlock options */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 8 }}>
               <button type="button" className="cyber-btn btn-primary" onClick={attemptFaceUnlock}>🧠 Face</button>
               <button type="button" className="cyber-btn btn-primary" onClick={attemptIrisUnlock}>👁️ Iris</button>
+              <button type="button" className="cyber-btn btn-primary" onClick={attemptFingerprintUnlock}>👆 Fingerprint</button>
             </div>
           </div>
         </div>
@@ -1430,6 +1562,46 @@ function App() {
         onRegistered={onIrisRegistered}
         onAuthenticated={onIrisAuthenticated}
       />
+
+      {/* NEW: Fingerprint Modal */}
+      {fingerprintModalOpen && fingerprintModalData && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(245, 248, 252, 0.98))', border: '1px solid var(--border-glow)', borderRadius: 20, padding: 30, width: '90%', maxWidth: 500, boxShadow: '0 0 50px rgba(159, 179, 223, 0.3)' }}>
+            <FingerprintAuth
+              username={fingerprintModalData.email}
+              masterPassword={fingerprintModalData.masterPassword || loginPassword}
+              onAuthSuccess={(result) => {
+                setFingerprintModalOpen(false);
+                if (fingerprintModalData.resolve) {
+                  fingerprintModalData.resolve(result);
+                }
+                setFingerprintModalData(null);
+              }}
+              onAuthError={(error) => {
+                setFingerprintModalOpen(false);
+                if (fingerprintModalData.reject) {
+                  fingerprintModalData.reject(error);
+                }
+                setFingerprintModalData(null);
+              }}
+            />
+            <div style={{ textAlign: 'center', marginTop: 20 }}>
+              <button 
+                className="cyber-btn btn-secondary" 
+                onClick={() => {
+                  setFingerprintModalOpen(false);
+                  if (fingerprintModalData.reject) {
+                    fingerprintModalData.reject(new Error('cancelled'));
+                  }
+                  setFingerprintModalData(null);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <OCRSection
         files={files}

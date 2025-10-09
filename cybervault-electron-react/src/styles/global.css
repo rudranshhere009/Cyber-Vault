@@ -48,6 +48,171 @@ body::before {
 .form-input { width: 100%; padding: 16px 20px; border: 1px solid var(--border-glow); border-radius: 12px; font-size: 14px; font-family: inherit; font-weight: 600; transition: all 0.3s ease; background: rgba(255, 255, 255, 0.8); color: var(--text-primary); position: relative; }
 .form-input:focus { outline: none; border-color: var(--primary-lavender); box-shadow: 0 0 20px rgba(159, 179, 223, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.95); }
 .form-input::placeholder { color: var(--text-secondary); font-weight: 600; }
+
+/* Fingerprint Authentication Styles */
+.fingerprint-auth {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(245, 248, 252, 0.98));
+  backdrop-filter: blur(15px);
+  border-radius: 20px;
+  padding: 30px;
+  border: 1px solid var(--border-glow);
+  box-shadow: 0 0 30px rgba(159, 179, 223, 0.2);
+  margin: 20px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.fingerprint-auth::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(159, 179, 223, 0.1), transparent);
+  animation: shimmer 4s infinite;
+}
+
+.fingerprint-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.fingerprint-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+.fingerprint-header h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-accent);
+  margin: 0;
+}
+
+.fingerprint-status {
+  text-align: center;
+  margin-bottom: 25px;
+  min-height: 20px;
+}
+
+.fingerprint-status p {
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.fingerprint-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.fingerprint-register-btn,
+.fingerprint-login-btn,
+.fingerprint-add-btn {
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.fingerprint-register-btn {
+  background: linear-gradient(135deg, var(--primary-lavender), var(--primary-purple));
+  color: white;
+  box-shadow: 0 0 20px rgba(159, 179, 223, 0.3);
+}
+
+.fingerprint-login-btn {
+  background: linear-gradient(135deg, var(--primary-violet), var(--primary-purple));
+  color: white;
+  box-shadow: 0 0 20px rgba(93, 143, 199, 0.3);
+}
+
+.fingerprint-add-btn {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(245, 248, 252, 0.95));
+  color: var(--text-accent);
+  border: 1px solid var(--border-glow);
+}
+
+.fingerprint-register-btn:hover,
+.fingerprint-login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 25px rgba(159, 179, 223, 0.4);
+}
+
+.fingerprint-add-btn:hover {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 1), rgba(245, 248, 252, 1));
+  box-shadow: 0 5px 20px rgba(159, 179, 223, 0.2);
+}
+
+.fingerprint-register-btn:disabled,
+.fingerprint-login-btn:disabled,
+.fingerprint-add-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.fingerprint-info {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.fingerprint-info small {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.fingerprint-help {
+  text-align: center;
+  padding-top: 15px;
+  border-top: 1px solid rgba(159, 179, 223, 0.2);
+}
+
+.fingerprint-help small {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.fingerprint-unsupported {
+  text-align: center;
+  opacity: 0.7;
+}
+
+.fingerprint-unsupported .fingerprint-icon {
+  animation: none;
+  opacity: 0.5;
+}
+
+.fingerprint-unsupported p {
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.fingerprint-unsupported small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
 .password-strength { margin-top: 8px; height: 4px; border-radius: 2px; background: rgba(159, 179, 223, 0.2); overflow: hidden; position: relative; }
 .password-strength-bar { height: 100%; width: 0%; transition: all 0.3s ease; position: relative; }
 .password-strength-bar::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, #9fb3df, #79a3d9, #b2c9e8); animation: strengthGlow 2s ease-in-out infinite alternate; }

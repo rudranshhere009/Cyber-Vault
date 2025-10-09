@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { registerUser } from '../utils/api'; // Assuming you have this api function
 import { encryptNeuralKey } from '../utils/encryption'; // Assuming you have this encryption function
+import FingerprintAuth from './FingerprintAuth';
 
 function Register() {
   const [formData, setFormData] = useState({
@@ -125,6 +126,26 @@ function Register() {
 
         <button type="submit" className="register-button">REGISTER</button>
       </form>
+
+      {/* Fingerprint Registration Section - shown after basic registration */}
+      {formData.username && formData.password && (
+        <div className="fingerprint-section">
+          <h3>🔐 Enhanced Security</h3>
+          <p>Add fingerprint authentication for faster, more secure access</p>
+          <FingerprintAuth
+            username={formData.username}
+            masterPassword={formData.password}
+            onAuthSuccess={(result) => {
+              if (result.type === 'registration') {
+                toast.success('Fingerprint registered! You can now use it to login.');
+              }
+            }}
+            onAuthError={(error) => {
+              toast.error('Fingerprint registration failed: ' + error.message);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -65,3 +65,44 @@ ipcMain.on('force-repaint', () => {
     mainWindow.restore();
   }
 });
+
+// WebAuthn credential storage IPC handlers
+import fs from 'fs/promises';
+
+ipcMain.handle('read-credential-store', async (event, filename) => {
+  try {
+    const userDataPath = app.getPath('userData');
+    const filePath = path.join(userDataPath, filename);
+    
+    // Check if file exists
+    try {
+      await fs.access(filePath);
+    } catch {
+      // File doesn't exist, return null
+      return null;
+    }
+    
+    const data = await fs.readFile(filePath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading credential store:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('write-credential-store', async (event, filename, data) => {
+  try {
+    const userDataPath = app.getPath('userData');
+    const filePath = path.join(userDataPath, filename);
+    
+    // Ensure directory exists
+    await fs.mkdir(userDataPath, { recursive: true });
+    
+    // Write encrypted data to file
+    await fs.writeFile(filePath, JSON.stringify(data), 'utf8');
+    return true;
+  } catch (error) {
+    console.error('Error writing credential store:', error);
+    throw error;
+  }
+});
