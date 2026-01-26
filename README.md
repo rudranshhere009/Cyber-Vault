@@ -36,7 +36,7 @@ Unlike cloud-based solutions, CyberVault empowers users to **encrypt, manage, an
 | **Backend / Crypto**   | Python (AES-256 encryption, key derivation), Node.js, WebAuthn          |
 | **Biometrics**         | face-api.js (Neural Authentication), UUID Fingerprint, Iris recognition |
 | **Build & Packaging**  | PyInstaller, Electron Forge                                             |
-| **Security Standards** | AES-256, PBKDF2, WebAuthn, Secure Keyboard Entry                        |
+| **Security Standards** | AES-256, PBKDF2, WebAuthn & Secure Keyboard Entry                       |
 
 ---
 
