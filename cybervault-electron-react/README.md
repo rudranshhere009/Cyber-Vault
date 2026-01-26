@@ -9,7 +9,7 @@
 
 **CyberVault** is a next-generation, **local-first desktop application** designed to securely store and manage sensitive data — completely offline. Built with **Electron**, **React**, and **WebAuthn-based cryptography**, CyberVault ensures that **your files never leave your device**, combining **AES-256 encryption** with **Neural Authentication** for unparalleled privacy and control.
 
-Unlike cloud based solutions, CyberVault empowers users to **encrypt, manage, and protect** their data directly on their systems using very advanced **biometric verification** (Face, Iris, and Fingerprint login).
+Unlike cloud-based solutions, CyberVault empowers users to **encrypt, manage, and protect** their data directly on their systems using very advanced **biometric verification** (Face, Iris, and Fingerprint login).
 
 ---
 
