@@ -3,6 +3,7 @@ import OCRSection from '../components/Chatbot';
 import IrisModal from '../components/IrisModal'; // NEW: Import iris modal
 import IrisDetector from '../utils/irisDetection'; // NEW: Import iris detector
 import FingerprintAuth from '../components/FingerprintAuth'; // NEW: Import fingerprint auth
+import Welcome from '../components/Welcome'; // Import welcome page
 
 function useMatrixEffect() {
   useEffect(() => {
@@ -371,7 +372,7 @@ function App() {
   useEasterEgg();
   const { session, saveSession, clearSession } = useSession();
 
-  const [page, setPage] = useState('greeting');
+  const [page, setPage] = useState('welcome');
   const [mode, setMode] = useState('login');
   const [loading, setLoading] = useState({ visible: false, message: '' });
 
@@ -1277,21 +1278,8 @@ function App() {
 
   return (
     <div>
-      {page === 'greeting' && (
-        <div className="login-page" id="greetingPage">
-          <div className="auth-container">
-            <div className="neural-header">
-              <h1 className="neural-title">Welcome to CyberVault</h1>
-              <p className="neural-subtitle">&gt; What you wanna do ahead?</p>
-            </div>
-            <div className="auth-form-container">
-              <div className="greeting-actions">
-                <button className="submit-btn" onClick={() => setPage('login')}>Login</button>
-                <button className="submit-btn" onClick={() => { setPage('login'); setMode('signup'); }}>Sign Up</button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {page === 'welcome' && (
+        <Welcome onContinue={() => setPage('login')} />
       )}
 
       {page === 'login' && (
