@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&display=swap');
+
 /* Welcome Page Styles - Enhanced */
 
 .welcome-container {
@@ -1464,13 +1466,15 @@
 
 .welcome-title {
   font-size: 64px;
-  font-weight: 900;
+  font-weight: 800;
   color: #1b2a44;
   margin: 0;
   position: relative;
   z-index: 2;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
   word-spacing: 12px;
+  text-transform: uppercase;
+  font-family: 'Space Grotesk', 'JetBrains Mono', monospace;
   text-shadow: 0 2px 6px rgba(27, 42, 68, 0.15);
   background: linear-gradient(180deg, #f7faff 0%, #e4eefc 100%);
   padding: 22px 44px;
