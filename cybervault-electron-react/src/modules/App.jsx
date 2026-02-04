@@ -385,11 +385,28 @@ function PasswordModal({ open, onClose, onConfirm, value, onChange }) {
   );
 }
 
+function ConfirmModal({ open, title, message, confirmText = 'Confirm', cancelText = 'Cancel', onConfirm, onClose }) {
+  if (!open) return null;
+  return (
+    <div className="confirm-overlay">
+      <div className="confirm-panel">
+        <div className="confirm-title">{title}</div>
+        <div className="confirm-message">{message}</div>
+        <div className="confirm-actions">
+          <button className="cyber-btn btn-secondary" onClick={onClose}>{cancelText}</button>
+          <button className="cyber-btn btn-primary" onClick={onConfirm}>{confirmText}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   useEasterEgg();
   const { session, saveSession, clearSession } = useSession();
   const [profileOpen, setProfileOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('cvTheme') || 'frost');
+  const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', confirmText: 'Confirm', cancelText: 'Cancel', onConfirm: null });
   const [profile, setProfile] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('cyberProfile') || 'null');
@@ -624,6 +641,17 @@ function App() {
 
   const rotateDeviceId = () => {
     updateProfile({ deviceId: `CV-${randomHex(4).toUpperCase()}` });
+  };
+
+  const openConfirm = ({ title, message, confirmText, cancelText, onConfirm }) => {
+    setConfirmState({
+      open: true,
+      title,
+      message,
+      confirmText: confirmText || 'Confirm',
+      cancelText: cancelText || 'Cancel',
+      onConfirm,
+    });
   };
 
   const copyRecoveryCodes = async () => {
@@ -1251,20 +1279,27 @@ function App() {
   }
 
   function logout() {
-    if (confirm('> confirm.neural.link.termination\n\nYou will be logged out and redirected to the login page.')) {
-      clearSession();
-      setPage('login');
-      setMode('login');
-      setLocked(false);
-      // Reset form states
-      setLoginEmail('');
-      setLoginPassword('');
-      setSignupEmail('');
-      setSignupPassword('');
-      setMasterPassword('');
-      setFiles([]);
-      window.electronAPI.forceRepaint();
-    }
+    openConfirm({
+      title: 'Confirm Session Termination',
+      message: 'You will be logged out and redirected to the login page.',
+      confirmText: 'Logout',
+      cancelText: 'Cancel',
+      onConfirm: () => {
+        clearSession();
+        setPage('login');
+        setMode('login');
+        setLocked(false);
+        // Reset form states
+        setLoginEmail('');
+        setLoginPassword('');
+        setSignupEmail('');
+        setSignupPassword('');
+        setMasterPassword('');
+        setFiles([]);
+        window.electronAPI.forceRepaint();
+        setConfirmState(prev => ({ ...prev, open: false }));
+      },
+    });
   }
 
   function formatFileSize(bytes) {
@@ -1383,22 +1418,36 @@ function App() {
   async function deleteFile(fileId) {
     const f = files.find(f => f.id === fileId);
     if (!f) return;
-    if (confirm(`> confirm.data.purge.irreversible\n\n"${f.name}"`)) {
-      try { if (f.dataId) await idbDelete(f.dataId); } catch {}
-      setFiles(prev => prev.filter(x => x.id !== fileId));
-      addActivityEvent('purge', `${f.name} purged`);
-      showNotification(`> ${f.name}.purged.from.neural.network`, 'success');
-    }
+    openConfirm({
+      title: 'Confirm File Purge',
+      message: `"${f.name}" will be permanently removed from the vault.`,
+      confirmText: 'Purge',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        try { if (f.dataId) await idbDelete(f.dataId); } catch {}
+        setFiles(prev => prev.filter(x => x.id !== fileId));
+        addActivityEvent('purge', `${f.name} purged`);
+        showNotification(`> ${f.name}.purged.from.neural.network`, 'success');
+        setConfirmState(prev => ({ ...prev, open: false }));
+      },
+    });
   }
 
   async function clearAllFiles() {
-    if (confirm('> confirm.neural.network.purge.all.data.irreversible\n\nThis will permanently delete ALL encrypted files.')) {
-      try { for (const f of files) { if (f.dataId) await idbDelete(f.dataId); } } catch {}
-      localStorage.removeItem('cyberVaultFiles');
-      setFiles([]);
-      addActivityEvent('purge_all', 'All files purged');
-      showNotification('> neural.network.purged.successfully', 'success');
-    }
+    openConfirm({
+      title: 'Confirm Total Purge',
+      message: 'This will permanently delete ALL encrypted files in the vault.',
+      confirmText: 'Purge All',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        try { for (const f of files) { if (f.dataId) await idbDelete(f.dataId); } } catch {}
+        localStorage.removeItem('cyberVaultFiles');
+        setFiles([]);
+        addActivityEvent('purge_all', 'All files purged');
+        showNotification('> neural.network.purged.successfully', 'success');
+        setConfirmState(prev => ({ ...prev, open: false }));
+      },
+    });
   }
 
   async function backupVault() {
@@ -2551,6 +2600,16 @@ function App() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmState.open}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        cancelText={confirmState.cancelText}
+        onClose={() => setConfirmState(prev => ({ ...prev, open: false }))}
+        onConfirm={confirmState.onConfirm || (() => setConfirmState(prev => ({ ...prev, open: false })))}
+      />
 
       <OCRSection
         files={files}

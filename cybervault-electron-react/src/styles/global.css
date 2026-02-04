@@ -280,6 +280,13 @@ body::before {
 .theme-toggle button { flex: 1; padding: 10px; border-radius: 12px; border: 1px solid rgba(159, 179, 223, 0.35); background: rgba(255, 255, 255, 0.9); font-weight: 800; cursor: pointer; }
 .theme-toggle button.active { background: linear-gradient(135deg, rgba(122, 162, 255, 0.9), rgba(93, 143, 199, 0.95)); color: white; box-shadow: 0 10px 20px rgba(93, 143, 199, 0.3); }
 
+
+.confirm-overlay { position: fixed; inset: 0; background: rgba(10, 16, 28, 0.45); backdrop-filter: blur(6px); z-index: 10020; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.confirm-panel { width: min(420px, 92vw); border-radius: 18px; background: linear-gradient(135deg, rgba(245, 248, 252, 0.98), rgba(230, 238, 250, 0.96)); border: 1px solid rgba(159, 179, 223, 0.35); box-shadow: 0 30px 60px rgba(20, 30, 60, 0.3); padding: 18px 20px; display: grid; gap: 10px; }
+.confirm-title { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-primary); }
+.confirm-message { font-size: 13px; font-weight: 600; color: var(--text-secondary); line-height: 1.5; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
 .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider { position: absolute; cursor: pointer; inset: 0; background: rgba(159, 179, 223, 0.4); transition: 0.2s; border-radius: 24px; }
@@ -331,6 +338,9 @@ body.theme-night .upload-tag { background: rgba(30, 41, 59, 0.7); border-color: 
 body.theme-night .file-card { background: linear-gradient(145deg, rgba(15, 23, 42, 0.9), rgba(17, 24, 39, 0.9)); border-color: rgba(99, 102, 241, 0.3); box-shadow: 0 12px 30px rgba(8, 12, 24, 0.6); }
 body.theme-night .file-card:hover { box-shadow: 0 20px 60px rgba(8, 12, 24, 0.75), 0 0 0 1px rgba(99, 102, 241, 0.4); }
 body.theme-night .drawer-overlay { background: rgba(2, 6, 23, 0.55); }
+body.theme-night .confirm-panel { background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.98)); border-color: rgba(99, 102, 241, 0.35); box-shadow: 0 30px 60px rgba(8, 12, 24, 0.7); }
+body.theme-night .confirm-title { color: #e2e8f0; }
+body.theme-night .confirm-message { color: #94a3b8; }
 body.theme-night .drawer-header { border-bottom-color: rgba(99, 102, 241, 0.25); }
 body.theme-night .drawer-intro,
 body.theme-night .drawer-card { background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9)); border-color: rgba(99, 102, 241, 0.25); }
