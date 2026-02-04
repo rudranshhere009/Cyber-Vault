@@ -118,6 +118,12 @@ function Welcome({ onContinue }) {
         <span className="bg-icon icon-fingerprint"></span>
         <span className="bg-icon icon-key"></span>
         <span className="bg-icon icon-cloud"></span>
+        <span className="bg-icon icon-vault"></span>
+        <span className="bg-icon icon-circuit"></span>
+        <span className="bg-icon icon-folder"></span>
+        <span className="bg-icon icon-scan"></span>
+        <span className="bg-icon icon-locker"></span>
+        <span className="bg-icon icon-binary"></span>
       </div>
 
       {/* Main Content */}
