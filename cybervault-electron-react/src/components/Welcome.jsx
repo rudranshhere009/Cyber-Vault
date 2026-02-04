@@ -110,6 +110,16 @@ function Welcome({ onContinue }) {
       {/* Animated Grid Background */}
       <div className="grid-bg"></div>
 
+      {/* Floating Security Icons */}
+      <div className="background-icons" aria-hidden="true">
+        <span className="bg-icon icon-lock"></span>
+        <span className="bg-icon icon-shield"></span>
+        <span className="bg-icon icon-doc"></span>
+        <span className="bg-icon icon-fingerprint"></span>
+        <span className="bg-icon icon-key"></span>
+        <span className="bg-icon icon-cloud"></span>
+      </div>
+
       {/* Main Content */}
       <div className="welcome-content">
         {/* Header Section */}
