@@ -116,7 +116,7 @@ function Welcome({ onContinue }) {
         <div className="welcome-header" style={{ transform: `translateY(${scrollY * 0.3}px)` }}>
           <div className="logo-container">
             <h1 className="welcome-title">
-              CYBERVAULT
+              CYBER VAULT
             </h1>
             <div className="title-aura"></div>
           </div>

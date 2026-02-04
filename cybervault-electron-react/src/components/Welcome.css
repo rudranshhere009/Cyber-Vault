@@ -6,10 +6,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #d4e3f0 0%, #96a8c7 50%, #7a92b8 100%);
+  background: linear-gradient(135deg, #dbe8f6 0%, #9fb6d6 45%, #7e96c2 100%);
+  background-size: 220% 220%;
+  animation: backgroundShift 18s ease-in-out infinite;
   position: relative;
   overflow: hidden;
   font-family: 'JetBrains Mono', monospace;
+}
+
+@keyframes backgroundShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 /* Animated Grid Background */
@@ -24,7 +38,7 @@
     linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   background-size: 50px 50px;
   z-index: 1;
-  animation: none;
+  animation: moveGrid 30s linear infinite;
   pointer-events: none;
 }
 
@@ -46,8 +60,18 @@
   height: 100%;
   background: radial-gradient(ellipse at 30% 50%, rgba(159, 179, 223, 0.15) 0%, transparent 50%),
               radial-gradient(ellipse at 70% 50%, rgba(121, 163, 217, 0.1) 0%, transparent 50%);
+  animation: overlayPulse 10s ease-in-out infinite;
   pointer-events: none;
   z-index: 1;
+}
+
+@keyframes overlayPulse {
+  0%, 100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 /* Background Elements */
@@ -1247,33 +1271,33 @@
 .blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(50px);
-  opacity: 0.3;
-  animation: float 8s ease-in-out infinite;
+  filter: blur(70px);
+  opacity: 0.45;
+  animation: float 12s ease-in-out infinite;
 }
 
 .blob-1 {
-  width: 300px;
-  height: 300px;
-  background: linear-gradient(135deg, #9fb3df, #79a3d9);
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle at 30% 30%, rgba(121, 163, 217, 0.9), rgba(93, 143, 199, 0.35));
   top: -100px;
   left: -100px;
   animation-delay: 0s;
 }
 
 .blob-2 {
-  width: 250px;
-  height: 250px;
-  background: linear-gradient(135deg, #5d8fc7, #b2c9e8);
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle at 40% 40%, rgba(95, 141, 204, 0.9), rgba(178, 201, 232, 0.35));
   bottom: -50px;
   right: -50px;
   animation-delay: 2s;
 }
 
 .blob-3 {
-  width: 200px;
-  height: 200px;
-  background: linear-gradient(135deg, #b8d4d4, #f5e6d3);
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle at 50% 50%, rgba(162, 195, 228, 0.85), rgba(238, 244, 252, 0.35));
   top: 50%;
   right: 10%;
   animation-delay: 4s;
@@ -1439,17 +1463,22 @@
 }
 
 .welcome-title {
-  font-size: 56px;
-  font-weight: 800;
-  background: linear-gradient(135deg, #5d8fc7, #9fb3df, #79a3d9);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: 64px;
+  font-weight: 900;
+  color: #1b2a44;
   margin: 0;
   position: relative;
   z-index: 2;
   letter-spacing: 2px;
-  text-shadow: 0 0 30px rgba(159, 179, 223, 0.2);
+  word-spacing: 12px;
+  text-shadow: 0 2px 6px rgba(27, 42, 68, 0.15);
+  background: linear-gradient(180deg, #f7faff 0%, #e4eefc 100%);
+  padding: 22px 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(27, 42, 68, 0.15);
+  box-shadow:
+    0 14px 34px rgba(27, 42, 68, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .welcome-tagline {
