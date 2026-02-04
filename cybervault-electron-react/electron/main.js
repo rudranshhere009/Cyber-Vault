@@ -1,4 +1,5 @@
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, dialog, session } from 'electron';
+import 'dotenv/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
@@ -49,6 +50,24 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow();
+
+  if (!isDev) {
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob:",
+      "font-src 'self' data:",
+      "connect-src 'self'",
+      "media-src 'self' blob:",
+    ].join('; ');
+
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      const headers = details.responseHeaders || {};
+      headers['Content-Security-Policy'] = [csp];
+      callback({ responseHeaders: headers });
+    });
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -104,5 +123,122 @@ ipcMain.handle('write-credential-store', async (event, filename, data) => {
   } catch (error) {
     console.error('Error writing credential store:', error);
     throw error;
+  }
+});
+
+ipcMain.handle('save-audit-report', async (event, defaultName, payload) => {
+  try {
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      title: 'Save Audit Report',
+      defaultPath: defaultName || 'cybervault_audit.json',
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    });
+    if (canceled || !filePath) return { canceled: true };
+    await fs.writeFile(filePath, payload, 'utf8');
+    return { canceled: false, filePath };
+  } catch (error) {
+    console.error('Error saving audit report:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('save-audit-report-pdf', async (event, defaultName, html) => {
+  let win;
+  try {
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      title: 'Save Audit Report (PDF)',
+      defaultPath: defaultName || 'cybervault_audit.pdf',
+      filters: [{ name: 'PDF', extensions: ['pdf'] }],
+    });
+    if (canceled || !filePath) return { canceled: true };
+
+    win = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        sandbox: true,
+      },
+    });
+
+    await win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+    const pdfBuffer = await win.webContents.printToPDF({
+      printBackground: true,
+      marginsType: 1,
+      pageSize: 'A4',
+    });
+    await fs.writeFile(filePath, pdfBuffer);
+    return { canceled: false, filePath };
+  } catch (error) {
+    console.error('Error saving audit report PDF:', error);
+    throw error;
+  } finally {
+    if (win) win.close();
+  }
+});
+
+ipcMain.handle('save-threat-log', async (event, defaultName, payload) => {
+  try {
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      title: 'Save Threat Log',
+      defaultPath: defaultName || 'cybervault_threat_log.json',
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    });
+    if (canceled || !filePath) return { canceled: true };
+    await fs.writeFile(filePath, payload, 'utf8');
+    return { canceled: false, filePath };
+  } catch (error) {
+    console.error('Error saving threat log:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('save-vault-backup', async (event, defaultName, payload) => {
+  try {
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      title: 'Save Vault Backup',
+      defaultPath: defaultName || 'cybervault_backup.cybvlt',
+      filters: [{ name: 'CyberVault Backup', extensions: ['cybvlt', 'json'] }],
+    });
+    if (canceled || !filePath) return { canceled: true };
+    await fs.writeFile(filePath, payload, 'utf8');
+    return { canceled: false, filePath };
+  } catch (error) {
+    console.error('Error saving vault backup:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('openai-ocr-answer', async (event, payload) => {
+  try {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return { error: 'missing_api_key' };
+    }
+    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    };
+    if (process.env.OPENAI_PROJECT) headers['OpenAI-Project'] = process.env.OPENAI_PROJECT;
+    if (process.env.OPENAI_ORG) headers['OpenAI-Organization'] = process.env.OPENAI_ORG;
+
+    const res = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model,
+        input: payload.input,
+        temperature: 0.2,
+        max_output_tokens: 500,
+      }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      return { error: 'api_error', detail: text };
+    }
+    const data = await res.json();
+    return { data };
+  } catch (error) {
+    console.error('OpenAI OCR error:', error);
+    return { error: 'exception', detail: String(error) };
   }
 });
