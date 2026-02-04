@@ -1817,7 +1817,6 @@ function App() {
               <div className="header-top">
                 <div className="brand-block">
                   <div className="brand-title">CyberVault</div>
-                  <div className="brand-subtitle">&gt; quantum-encrypted.neural-storage.protocol_v2.1</div>
                 </div>
                 <div className="header-actions">
                   <button className="profile-badge" onClick={() => setProfileOpen(true)}>
