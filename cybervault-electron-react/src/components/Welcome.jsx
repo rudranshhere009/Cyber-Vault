@@ -11,6 +11,16 @@ function Welcome({ onContinue }) {
   const [isInstalled, setIsInstalled] = useState(false);
   const [installMessage, setInstallMessage] = useState('');
   const releasesUrl = 'https://github.com/rudranshhere009/Cyber-Vault/releases/latest';
+  const prefersReducedMotion = useMemo(
+    () => window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false,
+    []
+  );
+  const isTouchDevice = useMemo(
+    () => window.matchMedia?.('(pointer: coarse)')?.matches ?? false,
+    []
+  );
+  const lowPowerDevice = useMemo(() => (window.navigator.hardwareConcurrency || 8) <= 4, []);
+  const liteEffects = prefersReducedMotion || isTouchDevice || lowPowerDevice;
 
   const isIOS = useMemo(() => {
     const ua = window.navigator.userAgent.toLowerCase();
@@ -25,12 +35,10 @@ function Welcome({ onContinue }) {
     return 'other';
   }, []);
 
-  const particleSlots = useMemo(() => Array.from({ length: 12 }, (_, i) => i), []);
+  const particleSlots = useMemo(() => Array.from({ length: 8 }, (_, i) => i), []);
 
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-    const isTouchDevice = window.matchMedia?.('(pointer: coarse)')?.matches;
-    if (prefersReducedMotion || isTouchDevice) return undefined;
+    if (liteEffects) return undefined;
 
     const handleMouseMove = (e) => {
       if (!mouseGlowRef.current) return;
@@ -50,12 +58,10 @@ function Welcome({ onContinue }) {
         rafRef.current = 0;
       }
     };
-  }, []);
+  }, [liteEffects]);
 
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-    const isTouchDevice = window.matchMedia?.('(pointer: coarse)')?.matches;
-    if (prefersReducedMotion || isTouchDevice) return undefined;
+    if (liteEffects) return undefined;
 
     let scrollRaf = 0;
     const handleScroll = () => {
@@ -72,7 +78,7 @@ function Welcome({ onContinue }) {
       window.removeEventListener('scroll', handleScroll);
       if (scrollRaf) cancelAnimationFrame(scrollRaf);
     };
-  }, []);
+  }, [liteEffects]);
 
   useEffect(() => {
     const standalone = window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator.standalone;
@@ -172,17 +178,28 @@ function Welcome({ onContinue }) {
   return (
     <div className="welcome-container" ref={containerRef}>
       <div className="welcome-bg">
+        <div className="void-layer"></div>
         <div className="blob blob-1"></div>
         <div className="blob blob-2"></div>
         <div className="blob blob-3"></div>
+        <div className="nebula-layer"></div>
+        <div className="streak-layer"></div>
+        <div className="dust-layer"></div>
+        <div className="ribbon-layer"></div>
+        <div className="pulse-ring-layer"></div>
+        <div className="scan-beam-layer"></div>
+        <div className="starfield-layer"></div>
+        <div className="film-grain-layer"></div>
         <div className="gradient-overlay"></div>
       </div>
 
-      <div className="particles">
-        {particleSlots.map((i) => (
-          <div key={i} className="particle"></div>
-        ))}
-      </div>
+      {!liteEffects && (
+        <div className="particles">
+          {particleSlots.map((i) => (
+            <div key={i} className="particle"></div>
+          ))}
+        </div>
+      )}
 
       <div className="grid-bg"></div>
 
@@ -295,9 +312,9 @@ function Welcome({ onContinue }) {
         </div>
       </div>
 
-      <div className="mouse-glow" ref={mouseGlowRef}></div>
-      <div className="ambient-light ambient-1"></div>
-      <div className="ambient-light ambient-2"></div>
+      {!liteEffects && <div className="mouse-glow" ref={mouseGlowRef}></div>}
+      {!liteEffects && <div className="ambient-light ambient-1"></div>}
+      {!liteEffects && <div className="ambient-light ambient-2"></div>}
 
       {installModalOpen && (
         <div className="install-overlay">
@@ -348,5 +365,5 @@ function Welcome({ onContinue }) {
   );
 }
 
-export default Welcome;
+export default React.memo(Welcome);
 

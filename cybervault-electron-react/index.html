@@ -9,10 +9,28 @@
     <!-- preload fonts for faster rendering -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@700;900&family=Exo+2:wght@700;900&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&family=Oxanium:wght@500;600;700&family=Exo+2:wght@500;600;700;900&family=Orbitron:wght@700;900&family=Rajdhani:wght@700;900&display=block"
+      rel="stylesheet"
+    >
     <title>CyberVault - Neural Authentication</title>
   </head>
-  <body>
+  <body class="theme-night">
+    <script>
+      (function () {
+        try {
+          var storedTheme = localStorage.getItem('cvTheme');
+          var initialTheme = storedTheme === 'frost' ? 'frost' : 'night';
+          if (initialTheme === 'night') {
+            document.body.classList.add('theme-night');
+          } else {
+            document.body.classList.remove('theme-night');
+          }
+        } catch (_) {
+          document.body.classList.add('theme-night');
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

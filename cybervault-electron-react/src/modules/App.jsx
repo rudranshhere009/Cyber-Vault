@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import pdfWorker from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 import OCRSection from '../components/Chatbot';
@@ -594,6 +594,7 @@ function App() {
   const [profileNotice, setProfileNotice] = useState('');
 
   const [page, setPage] = useState('welcome');
+  const handleContinueToLogin = useCallback(() => setPage('login'), []);
   const [missionOpen, setMissionOpen] = useState(false);
   const [mode, setMode] = useState('login');
   const [loading, setLoading] = useState({ visible: false, message: '' });
@@ -2858,7 +2859,7 @@ function App() {
   return (
     <div>
       {page === 'welcome' && (
-        <Welcome onContinue={() => setPage('login')} />
+        <Welcome onContinue={handleContinueToLogin} />
       )}
 
       {page === 'login' && (
