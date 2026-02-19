@@ -1,5 +1,4 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@700;900&family=Exo+2:wght@700;900&display=swap');
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -36,6 +35,62 @@ body::before {
 .matrix-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; opacity: 0.1; }
 .login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
 .auth-container { width: 100%; max-width: 500px; padding: 20px; position: relative; z-index: 1; }
+.back-to-welcome-btn {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  left: max(16px, env(safe-area-inset-left));
+  z-index: 20;
+  border: 1px solid rgba(93, 143, 199, 0.42);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(232, 241, 252, 0.9));
+  color: #2a3a53;
+  border-radius: 999px;
+  padding: 10px 16px 10px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.24s ease;
+  box-shadow:
+    0 10px 24px rgba(93, 143, 199, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.back-to-welcome-btn .back-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(121, 163, 217, 0.95), rgba(93, 143, 199, 0.95));
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  line-height: 1;
+  box-shadow: 0 4px 10px rgba(93, 143, 199, 0.38);
+}
+
+.back-to-welcome-btn:focus-visible {
+  outline: none;
+  box-shadow:
+    0 14px 26px rgba(93, 143, 199, 0.28),
+    0 0 0 3px rgba(159, 179, 223, 0.2),
+    0 0 0 5px rgba(93, 143, 199, 0.22);
+}
+
+.back-to-welcome-btn:hover {
+  color: #162238;
+  border-color: rgba(93, 143, 199, 0.66);
+  transform: translateY(-1px) scale(1.01);
+  box-shadow:
+    0 14px 26px rgba(93, 143, 199, 0.28),
+    0 0 0 3px rgba(159, 179, 223, 0.2);
+}
 .neural-header { text-align: center; margin-bottom: 40px; position: relative; }
 .neural-header::before { content: ''; position: absolute; top: -20px; left: 50%; transform: translateX(-50%); width: 200px; height: 2px; background: linear-gradient(90deg, transparent, var(--primary-lavender), transparent); animation: neuralScan 2s linear infinite; }
 @keyframes neuralScan { 0% { transform: translateX(-50%) scaleX(0); } 100% { transform: translateX(-50%) scaleX(1); } }
@@ -551,6 +606,25 @@ body.theme-night .password-input::placeholder { color: rgba(203, 213, 225, 0.7);
 body.theme-night .empty-state { background: linear-gradient(145deg, rgba(8, 12, 24, 0.88), rgba(15, 23, 42, 0.92)); border-color: rgba(99, 102, 241, 0.4); color: #9aa7bd; box-shadow: inset 0 1px 0 rgba(99, 102, 241, 0.08); }
 body.theme-night .empty-state h3 { color: #e2e8f0; }
 body.theme-night .empty-state p { color: #94a3b8; opacity: 0.9; }
+body.theme-night .security-info {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.78), rgba(15, 23, 42, 0.86));
+  border-color: rgba(125, 211, 252, 0.34);
+  box-shadow: 0 14px 28px rgba(2, 6, 23, 0.45);
+}
+body.theme-night .security-title {
+  color: #7dd3fc;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+body.theme-night .security-features {
+  color: #dbeafe;
+  font-weight: 800;
+  letter-spacing: 0.15px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+body.theme-night .security-features li::before {
+  color: #93c5fd;
+}
 .main-grid { flex-grow: 1; display: grid; grid-template-columns: auto 1fr; gap: 30px; }
 .sidebar { width: 320px; background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(235, 242, 252, 0.98)); backdrop-filter: blur(20px); border-radius: 22px; padding: 18px 16px; border: 1px solid rgba(159, 179, 223, 0.45); box-shadow: 0 10px 35px rgba(159, 179, 223, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.4); position: relative; overflow: hidden; }
 .sidebar::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--primary-lavender), var(--primary-purple), var(--primary-violet)); animation: scanline 2s linear infinite; }
@@ -1188,6 +1262,20 @@ body.theme-night .file-context-menu button:hover { background: rgba(51, 65, 85, 
     padding: 12px !important;
   }
 
+  .back-to-welcome-btn {
+    top: max(10px, env(safe-area-inset-top)) !important;
+    left: max(10px, env(safe-area-inset-left)) !important;
+    padding: 8px 12px 8px 9px !important;
+    gap: 8px !important;
+    font-size: 11px !important;
+  }
+
+  .back-to-welcome-btn .back-icon {
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 13px !important;
+  }
+
   .auth-form-container {
     padding: 18px 14px !important;
     border-radius: 16px !important;
@@ -1327,4 +1415,37 @@ body.theme-night .file-context-menu button:hover { background: rgba(51, 65, 85, 
   .profile-title {
     font-size: 16px !important;
   }
+}
+
+/* Performance overrides for auth + mobile */
+@media (max-width: 900px) {
+  .auth-form-container,
+  .header,
+  .greeting-card,
+  .preview-panel {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14) !important;
+  }
+
+  .mode-toggle button,
+  .submit-btn,
+  .cyber-btn,
+  .form-input,
+  .back-to-welcome-btn {
+    transition: all 0.16s ease !important;
+  }
+}
+
+/* Keep auth animations active on login/signup */
+.login-page .neural-header::before {
+  animation: neuralScan 2s linear infinite !important;
+}
+
+.login-page .auth-form-container::before {
+  animation: shimmer 3s linear infinite !important;
+}
+
+.login-page .fingerprint-auth::before {
+  animation: shimmer 4s linear infinite !important;
 }

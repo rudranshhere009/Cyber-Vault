@@ -561,7 +561,7 @@ function App() {
   useEasterEgg();
   const { session, saveSession, clearSession, sessionLoaded } = useSession();
   const [profileOpen, setProfileOpen] = useState(false);
-  const [theme, setTheme] = useState(() => localStorage.getItem('cvTheme') || 'frost');
+  const [theme, setTheme] = useState('night');
   const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', confirmText: 'Confirm', cancelText: 'Cancel', onConfirm: null });
   const [exportState, setExportState] = useState({ open: false, file: null, recommended: 'text' });
   const [avatarCrop, setAvatarCrop] = useState({ open: false, src: '', zoom: 1, rotation: 0, imgW: 0, imgH: 0 });
@@ -1703,8 +1703,8 @@ function App() {
         setPage('login');
         setMode('login');
         setLocked(false);
-        setTheme('frost');
-        localStorage.setItem('cvTheme', 'frost');
+        setTheme('night');
+        localStorage.setItem('cvTheme', 'night');
         // Reset form states
         setLoginEmail('');
         setLoginPassword('');
@@ -2863,6 +2863,15 @@ function App() {
 
       {page === 'login' && (
         <div className="login-page" id="loginPage">
+          <button
+            type="button"
+            className="back-to-welcome-btn"
+            onClick={() => setPage('welcome')}
+          >
+            <span className="back-icon" aria-hidden="true">{'\u25CF'}</span>
+            <span>Back to Welcome</span>
+          </button>
+
           <div className="auth-container">
             <div className="neural-header">
               <h1 className="neural-title">CyberVault</h1>
@@ -2889,7 +2898,7 @@ function App() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <button type="submit" className="submit-btn">🚀 Password Login</button>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <button type="button" className="cyber-btn btn-primary" style={{ flex: '1 1 auto', minWidth: '80px' }} onClick={handleFaceLogin}>🧠 Face</button>
+                      <button type="button" className="cyber-btn btn-primary" style={{ flex: '1 1 auto', minWidth: '80px' }} onClick={handleFaceLogin}>🙂 Face</button>
                       <button type="button" className="cyber-btn btn-primary" style={{ flex: '1 1 auto', minWidth: '80px' }} onClick={handleIrisLogin}>👁️ Iris</button>
                       <button type="button" className="cyber-btn btn-primary" style={{ flex: '1 1 auto', minWidth: '120px' }} onClick={handleFingerprintLogin}>👆 Fingerprint</button>
                     </div>
@@ -3831,7 +3840,7 @@ function App() {
             </form>
             {/* NEW: Added all biometric unlock options */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-              <button type="button" className="cyber-btn btn-primary" style={{ minWidth: '80px' }} onClick={attemptFaceUnlock}>🧠 Face</button>
+              <button type="button" className="cyber-btn btn-primary" style={{ minWidth: '80px' }} onClick={attemptFaceUnlock}>🙂 Face</button>
               <button type="button" className="cyber-btn btn-primary" style={{ minWidth: '80px' }} onClick={attemptIrisUnlock}>👁️ Iris</button>
               <button type="button" className="cyber-btn btn-primary" style={{ minWidth: '120px' }} onClick={attemptFingerprintUnlock}>👆 Fingerprint</button>
             </div>

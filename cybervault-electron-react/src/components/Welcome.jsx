@@ -26,6 +26,10 @@ function Welcome({ onContinue }) {
   }, []);
 
   useEffect(() => {
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    const isTouchDevice = window.matchMedia?.('(pointer: coarse)')?.matches;
+    if (prefersReducedMotion || isTouchDevice) return undefined;
+
     const handleMouseMove = (e) => {
       if (!mouseGlowRef.current) return;
       const x = e.clientX - 50;
@@ -36,7 +40,7 @@ function Welcome({ onContinue }) {
         rafRef.current = 0;
       });
     };
-    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       if (rafRef.current) {
@@ -47,6 +51,10 @@ function Welcome({ onContinue }) {
   }, []);
 
   useEffect(() => {
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    const isTouchDevice = window.matchMedia?.('(pointer: coarse)')?.matches;
+    if (prefersReducedMotion || isTouchDevice) return undefined;
+
     let scrollRaf = 0;
     const handleScroll = () => {
       if (!containerRef.current) return;
@@ -57,7 +65,7 @@ function Welcome({ onContinue }) {
         scrollRaf = 0;
       });
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
       window.removeEventListener('scroll', handleScroll);
       if (scrollRaf) cancelAnimationFrame(scrollRaf);
@@ -157,6 +165,8 @@ function Welcome({ onContinue }) {
     window.open(releasesUrl, '_blank', 'noopener,noreferrer');
   };
 
+  const handleContinueClick = () => onContinue();
+
   return (
     <div className="welcome-container" ref={containerRef}>
       <div className="welcome-bg">
@@ -181,8 +191,10 @@ function Welcome({ onContinue }) {
       <div className="welcome-content">
         <div className="welcome-header">
           <div className="logo-container">
-            <h1 className="welcome-title">CYBERVAULT</h1>
-            <div className="title-aura"></div>
+            <h1 className="welcome-title">
+              <span className="title-word">CYBER</span>
+              <span className="title-word">VAULT</span>
+            </h1>
           </div>
           <p className="welcome-description">
             Experience secure local storage powered by modern encryption and biometric authentication.
@@ -265,9 +277,13 @@ function Welcome({ onContinue }) {
         </div>
 
         <div className="cta-section">
-          <button className="welcome-btn primary" onClick={onContinue}>
-            <span className="btn-text">Access Your Vault</span>
-            <span className="btn-arrow">-></span>
+          <button className="welcome-btn primary" onClick={handleContinueClick}>
+            <span className="btn-text">
+              <span className="btn-word">Access</span>
+              <span className="btn-word">Your</span>
+              <span className="btn-word">Vault</span>
+            </span>
+            <span className="btn-dot" aria-hidden="true">{'\u25CF'}</span>
           </button>
         </div>
 
@@ -331,3 +347,4 @@ function Welcome({ onContinue }) {
 }
 
 export default Welcome;
+
