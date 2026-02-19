@@ -2219,7 +2219,7 @@
   display: grid;
   place-items: center;
   font-size: 20px;
-  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+  font-family: 'Oxanium', 'Exo 2', 'JetBrains Mono', sans-serif;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -2601,7 +2601,7 @@ body.theme-night .welcome-container {
     radial-gradient(980px 620px at 78% 26%, rgba(12, 97, 122, 0.22), transparent 72%),
     linear-gradient(140deg, #01040b 0%, #040b18 44%, #081229 100%);
   background-size: 260% 260%;
-  animation: backgroundShift 9.5s ease-in-out infinite;
+  animation: backgroundShift 16s ease-in-out infinite;
   color: #e5efff;
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
@@ -2614,11 +2614,12 @@ body.theme-night .welcome-container::after {
     radial-gradient(circle at 80% 30%, rgba(56, 189, 248, 0.22), transparent 58%),
     radial-gradient(circle at 40% 80%, rgba(59, 130, 246, 0.16), transparent 54%);
   opacity: 0.62;
-  animation: auroraDrift 12s ease-in-out infinite;
+  animation: auroraDrift 18s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 body.theme-night .welcome-container::after {
-  animation-duration: 15s;
+  animation-duration: 24s;
   filter: blur(10px);
 }
 
@@ -2631,7 +2632,8 @@ body.theme-night .welcome-bg::after {
     radial-gradient(circle at 70% 60%, rgba(99, 102, 241, 0.2), transparent 48%);
   filter: blur(28px);
   opacity: 0.5;
-  animation: nightDrift 9s ease-in-out infinite;
+  animation: nightDrift 16s ease-in-out infinite;
+  will-change: transform, opacity;
   pointer-events: none;
 }
 
@@ -2647,7 +2649,8 @@ body.theme-night .welcome-bg::before {
   mix-blend-mode: screen;
   filter: blur(16px);
   opacity: 0.5;
-  animation: wateryFlow 8.5s linear infinite;
+  animation: wateryFlow 22s linear infinite;
+  will-change: transform, opacity;
   pointer-events: none;
 }
 
@@ -2680,7 +2683,7 @@ body.theme-night .grid-bg {
     linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
     linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
   opacity: 0.22;
-  animation: moveGrid 14s linear infinite;
+  animation: moveGrid 30s linear infinite;
 }
 
 body.theme-night .particle {
@@ -2690,8 +2693,9 @@ body.theme-night .particle {
   border-radius: 50%;
   background: rgba(147, 197, 253, 0.85);
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.65);
-  opacity: 0.5;
-  animation: drift 18s linear infinite;
+  opacity: 0.35;
+  animation: drift 34s linear infinite;
+  will-change: transform, opacity;
 }
 
 body.theme-night .welcome-title {
@@ -2705,8 +2709,9 @@ body.theme-night .welcome-title {
   text-shadow: 0 0 14px rgba(125, 211, 252, 0.28);
   letter-spacing: 3.4px;
   gap: 36px;
-  animation: titleWave 7.5s ease-in-out infinite;
+  animation: titleWave 12s ease-in-out infinite;
   transform-origin: center center;
+  will-change: transform;
 }
 
 body.theme-night .welcome-title::after {
@@ -2803,7 +2808,8 @@ body.theme-night .pamphlet-inner {
   box-shadow:
     0 16px 30px rgba(2, 6, 23, 0.72),
     0 0 0 1px rgba(56, 189, 248, 0.2) inset;
-  animation: nightCardFloat 5.8s ease-in-out infinite;
+  animation: nightCardFloat 9s ease-in-out infinite;
+  will-change: transform;
 }
 
 body.theme-night .pamphlet:hover .pamphlet-inner {
@@ -2852,7 +2858,7 @@ body.theme-night .security-card:hover {
 body.theme-night .stats-bar,
 body.theme-night .security-card,
 body.theme-night .welcome-description {
-  animation: nightPanelPulse 6.5s ease-in-out infinite;
+  animation: none;
 }
 
 @keyframes nightPanelPulse {
@@ -2919,7 +2925,8 @@ body.theme-night .install-fab {
     0 0 0 1px rgba(56, 189, 248, 0.18) inset,
     0 0 18px rgba(56, 189, 248, 0.28);
   color: #7dd3fc;
-  animation: fabBob 4.4s ease-in-out infinite;
+  animation: fabBob 7s ease-in-out infinite;
+  will-change: transform;
 }
 
 body.theme-night .install-fab:hover {
@@ -2973,15 +2980,8 @@ body.theme-night .install-desktop-actions .cyber-btn {
     transform: none !important;
   }
 
-  body.theme-night .pamphlet-inner,
-  body.theme-night .stats-bar,
-  body.theme-night .security-card,
-  body.theme-night .welcome-description {
-    animation-duration: 8s !important;
-  }
-
   body.theme-night .particle {
-    animation-duration: 12s !important;
+    animation-duration: 40s !important;
   }
 
   body.theme-night .particles {

@@ -185,7 +185,7 @@ function Welcome({ onContinue }) {
       <div className="grid-bg"></div>
 
       <button className="install-fab" onClick={openInstallModal} title={isInstalled ? 'App installed' : 'Download app'}>
-        {'\u{2B07}\u{FE0F}'}
+        {'\u2726'}
       </button>
 
       <div className="welcome-content">
