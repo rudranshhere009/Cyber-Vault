@@ -2597,9 +2597,9 @@
 /* Night Theme: Welcome Page */
 body.theme-night .welcome-container {
   background:
-    radial-gradient(1200px 680px at 20% 18%, rgba(34, 66, 139, 0.34), transparent 68%),
-    radial-gradient(980px 620px at 78% 26%, rgba(14, 116, 144, 0.28), transparent 72%),
-    linear-gradient(140deg, #02060f 0%, #060f1f 44%, #0a1730 100%);
+    radial-gradient(1200px 680px at 20% 18%, rgba(31, 58, 124, 0.28), transparent 68%),
+    radial-gradient(980px 620px at 78% 26%, rgba(12, 97, 122, 0.22), transparent 72%),
+    linear-gradient(140deg, #01040b 0%, #040b18 44%, #081229 100%);
   background-size: 260% 260%;
   animation: backgroundShift 9.5s ease-in-out infinite;
   color: #e5efff;
@@ -2630,7 +2630,7 @@ body.theme-night .welcome-bg::after {
     radial-gradient(circle at 30% 40%, rgba(56, 189, 248, 0.18), transparent 42%),
     radial-gradient(circle at 70% 60%, rgba(99, 102, 241, 0.2), transparent 48%);
   filter: blur(28px);
-  opacity: 0.42;
+  opacity: 0.5;
   animation: nightDrift 9s ease-in-out infinite;
   pointer-events: none;
 }
@@ -2640,14 +2640,14 @@ body.theme-night .welcome-bg::before {
   position: absolute;
   inset: -22%;
   background:
-    radial-gradient(circle at 15% 30%, rgba(56, 189, 248, 0.16) 0 9%, transparent 16%),
-    radial-gradient(circle at 42% 64%, rgba(147, 197, 253, 0.14) 0 8%, transparent 15%),
-    radial-gradient(circle at 70% 20%, rgba(59, 130, 246, 0.15) 0 10%, transparent 16%),
-    radial-gradient(circle at 88% 72%, rgba(56, 189, 248, 0.12) 0 7%, transparent 14%);
+    radial-gradient(circle at 15% 30%, rgba(56, 189, 248, 0.2) 0 9%, transparent 16%),
+    radial-gradient(circle at 42% 64%, rgba(147, 197, 253, 0.17) 0 8%, transparent 15%),
+    radial-gradient(circle at 70% 20%, rgba(59, 130, 246, 0.18) 0 10%, transparent 16%),
+    radial-gradient(circle at 88% 72%, rgba(56, 189, 248, 0.15) 0 7%, transparent 14%);
   mix-blend-mode: screen;
-  filter: blur(18px);
-  opacity: 0.38;
-  animation: wateryFlow 12s linear infinite;
+  filter: blur(16px);
+  opacity: 0.5;
+  animation: wateryFlow 8.5s linear infinite;
   pointer-events: none;
 }
 
@@ -2705,6 +2705,8 @@ body.theme-night .welcome-title {
   text-shadow: 0 0 14px rgba(125, 211, 252, 0.28);
   letter-spacing: 3.4px;
   gap: 36px;
+  animation: titleWave 7.5s ease-in-out infinite;
+  transform-origin: center center;
 }
 
 body.theme-night .welcome-title::after {
@@ -2714,6 +2716,22 @@ body.theme-night .welcome-title::after {
 
 body.theme-night .title-word + .title-word {
   margin-left: 8px;
+}
+
+@keyframes titleWave {
+  0%,
+  100% {
+    transform: perspective(900px) rotateX(0deg) skewX(0deg) translateY(0);
+  }
+  25% {
+    transform: perspective(900px) rotateX(0.8deg) skewX(0.6deg) translateY(-0.5px);
+  }
+  50% {
+    transform: perspective(900px) rotateX(0deg) skewX(-0.7deg) translateY(0.5px);
+  }
+  75% {
+    transform: perspective(900px) rotateX(-0.7deg) skewX(0.4deg) translateY(0);
+  }
 }
 
 body.theme-night .welcome-description,
@@ -2891,6 +2909,35 @@ body.theme-night .install-note {
   background: rgba(17, 30, 54, 0.85);
   border-color: rgba(56, 189, 248, 0.42);
   color: #e2ecfb;
+}
+
+body.theme-night .install-fab {
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  background: linear-gradient(145deg, rgba(12, 24, 45, 0.92), rgba(19, 32, 58, 0.96));
+  box-shadow:
+    0 12px 26px rgba(2, 6, 23, 0.62),
+    0 0 0 1px rgba(56, 189, 248, 0.18) inset,
+    0 0 18px rgba(56, 189, 248, 0.28);
+  color: #7dd3fc;
+  animation: fabBob 4.4s ease-in-out infinite;
+}
+
+body.theme-night .install-fab:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow:
+    0 16px 30px rgba(2, 6, 23, 0.7),
+    0 0 0 1px rgba(56, 189, 248, 0.24) inset,
+    0 0 22px rgba(56, 189, 248, 0.35);
+}
+
+@keyframes fabBob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
 }
 
 body.theme-night .install-title {
