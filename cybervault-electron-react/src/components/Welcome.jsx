@@ -25,6 +25,8 @@ function Welcome({ onContinue }) {
     return 'other';
   }, []);
 
+  const particleSlots = useMemo(() => Array.from({ length: 12 }, (_, i) => i), []);
+
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
     const isTouchDevice = window.matchMedia?.('(pointer: coarse)')?.matches;
@@ -177,7 +179,7 @@ function Welcome({ onContinue }) {
       </div>
 
       <div className="particles">
-        {[...Array(12)].map((_, i) => (
+        {particleSlots.map((i) => (
           <div key={i} className="particle"></div>
         ))}
       </div>

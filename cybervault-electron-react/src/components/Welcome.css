@@ -1,5 +1,5 @@
 /* Welcome Page Styles - Enhanced */
-@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700&family=Oxanium:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700&family=Oxanium:wght@500;600;700&family=Space+Grotesk:wght@600;700&display=swap');
 
 .welcome-container {
   min-height: 100vh;
@@ -1641,7 +1641,7 @@
   letter-spacing: 2px;
   word-spacing: 0;
   text-transform: uppercase;
-  font-family: 'Exo 2', 'JetBrains Mono', monospace;
+  font-family: 'Space Grotesk', 'JetBrains Mono', monospace;
   background: #ffffff;
   -webkit-text-fill-color: currentColor;
   text-shadow: 0 0 6px rgba(93, 143, 199, 0.18);
@@ -2709,7 +2709,7 @@ body.theme-night .welcome-title {
   text-shadow: 0 0 14px rgba(125, 211, 252, 0.28);
   letter-spacing: 3.4px;
   gap: 36px;
-  animation: titleWave 1.2s linear infinite;
+  animation: titleMoveOnly 2.2s ease-in-out infinite !important;
   transform-origin: center center;
   will-change: transform;
   transform-style: preserve-3d;
@@ -2725,43 +2725,54 @@ body.theme-night .title-word + .title-word {
 }
 
 body.theme-night .welcome-title .title-word {
-  animation: titleWordWave 1.2s linear infinite;
+  animation: none !important;
   will-change: transform;
+  display: inline-block;
 }
 
 body.theme-night .welcome-title .title-word:last-child {
-  animation-delay: -0.6s;
+  animation-delay: 0s !important;
 }
 
-@keyframes titleWave {
+@keyframes titleWaveSoft {
   0%,
   100% {
-    transform: perspective(900px) rotateX(0deg) skewX(0deg) translateY(0);
+    transform: perspective(1000px) rotateX(0deg) rotateY(0deg) skewX(0deg) translateY(0);
   }
-  25% {
-    transform: perspective(900px) rotateX(2.4deg) skewX(2.8deg) translateY(-2px);
+  20% {
+    transform: perspective(1000px) rotateX(1.2deg) rotateY(0.8deg) skewX(1.6deg) translateY(-1px);
   }
   50% {
-    transform: perspective(900px) rotateX(0deg) skewX(-3.1deg) translateY(2px);
+    transform: perspective(1000px) rotateX(-1deg) rotateY(-0.9deg) skewX(-1.8deg) translateY(1px);
   }
-  75% {
-    transform: perspective(900px) rotateX(-2deg) skewX(2.2deg) translateY(-1px);
+  80% {
+    transform: perspective(1000px) rotateX(0.8deg) rotateY(0.6deg) skewX(1.2deg) translateY(-0.6px);
   }
 }
 
-@keyframes titleWordWave {
+@keyframes titleWordSway {
   0%,
   100% {
-    transform: translateY(0) skewX(0deg);
+    transform: translateX(0) translateY(0) rotateZ(0deg);
   }
   25% {
-    transform: translateY(-1.5px) skewX(2.6deg);
+    transform: translateX(1.8px) translateY(-1px) rotateZ(0.6deg);
   }
   50% {
-    transform: translateY(1.5px) skewX(-2.6deg);
+    transform: translateX(-2.2px) translateY(1px) rotateZ(-0.7deg);
   }
   75% {
-    transform: translateY(-1px) skewX(1.7deg);
+    transform: translateX(1.4px) translateY(-0.6px) rotateZ(0.45deg);
+  }
+}
+
+@keyframes titleMoveOnly {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
   }
 }
 
