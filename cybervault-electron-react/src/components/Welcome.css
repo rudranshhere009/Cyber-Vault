@@ -2709,18 +2709,28 @@ body.theme-night .welcome-title {
   text-shadow: 0 0 14px rgba(125, 211, 252, 0.28);
   letter-spacing: 3.4px;
   gap: 36px;
-  animation: titleWave 12s ease-in-out infinite;
+  animation: titleWave 1.2s linear infinite;
   transform-origin: center center;
   will-change: transform;
+  transform-style: preserve-3d;
 }
 
 body.theme-night .welcome-title::after {
-  background: linear-gradient(110deg, transparent 38%, rgba(125, 211, 252, 0.38) 50%, transparent 62%);
-  animation-duration: 3.8s;
+  animation: none;
+  opacity: 0;
 }
 
 body.theme-night .title-word + .title-word {
   margin-left: 8px;
+}
+
+body.theme-night .welcome-title .title-word {
+  animation: titleWordWave 1.2s linear infinite;
+  will-change: transform;
+}
+
+body.theme-night .welcome-title .title-word:last-child {
+  animation-delay: -0.6s;
 }
 
 @keyframes titleWave {
@@ -2729,13 +2739,29 @@ body.theme-night .title-word + .title-word {
     transform: perspective(900px) rotateX(0deg) skewX(0deg) translateY(0);
   }
   25% {
-    transform: perspective(900px) rotateX(0.8deg) skewX(0.6deg) translateY(-0.5px);
+    transform: perspective(900px) rotateX(2.4deg) skewX(2.8deg) translateY(-2px);
   }
   50% {
-    transform: perspective(900px) rotateX(0deg) skewX(-0.7deg) translateY(0.5px);
+    transform: perspective(900px) rotateX(0deg) skewX(-3.1deg) translateY(2px);
   }
   75% {
-    transform: perspective(900px) rotateX(-0.7deg) skewX(0.4deg) translateY(0);
+    transform: perspective(900px) rotateX(-2deg) skewX(2.2deg) translateY(-1px);
+  }
+}
+
+@keyframes titleWordWave {
+  0%,
+  100% {
+    transform: translateY(0) skewX(0deg);
+  }
+  25% {
+    transform: translateY(-1.5px) skewX(2.6deg);
+  }
+  50% {
+    transform: translateY(1.5px) skewX(-2.6deg);
+  }
+  75% {
+    transform: translateY(-1px) skewX(1.7deg);
   }
 }
 
