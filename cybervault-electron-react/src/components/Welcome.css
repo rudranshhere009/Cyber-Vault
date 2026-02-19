@@ -2596,7 +2596,7 @@
 
 /* Night Theme: Welcome Page */
 body.theme-night .welcome-container {
-  background: linear-gradient(135deg, #070d1e 0%, #0d1730 42%, #132647 100%);
+  background: linear-gradient(135deg, #040914 0%, #091326 42%, #0f1f3a 100%);
   background-size: 260% 260%;
   animation: backgroundShift 11s ease-in-out infinite;
   color: #e5efff;
@@ -2607,10 +2607,10 @@ body.theme-night .welcome-container {
 body.theme-night .welcome-container::before,
 body.theme-night .welcome-container::after {
   background:
-    radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.28), transparent 48%),
-    radial-gradient(circle at 80% 30%, rgba(56, 189, 248, 0.28), transparent 56%),
-    radial-gradient(circle at 40% 80%, rgba(59, 130, 246, 0.2), transparent 52%);
-  opacity: 0.74;
+    radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.22), transparent 50%),
+    radial-gradient(circle at 80% 30%, rgba(56, 189, 248, 0.22), transparent 58%),
+    radial-gradient(circle at 40% 80%, rgba(59, 130, 246, 0.16), transparent 54%);
+  opacity: 0.62;
   animation: auroraDrift 12s ease-in-out infinite;
 }
 
@@ -2627,7 +2627,7 @@ body.theme-night .welcome-bg::after {
     radial-gradient(circle at 30% 40%, rgba(56, 189, 248, 0.18), transparent 42%),
     radial-gradient(circle at 70% 60%, rgba(99, 102, 241, 0.2), transparent 48%);
   filter: blur(28px);
-  opacity: 0.55;
+  opacity: 0.42;
   animation: nightDrift 9s ease-in-out infinite;
   pointer-events: none;
 }
@@ -2648,7 +2648,7 @@ body.theme-night .grid-bg {
   background-image:
     linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
     linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
-  opacity: 0.32;
+  opacity: 0.22;
   animation: moveGrid 14s linear infinite;
 }
 
