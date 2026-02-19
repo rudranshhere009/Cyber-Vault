@@ -2596,9 +2596,12 @@
 
 /* Night Theme: Welcome Page */
 body.theme-night .welcome-container {
-  background: linear-gradient(135deg, #040914 0%, #091326 42%, #0f1f3a 100%);
+  background:
+    radial-gradient(1200px 680px at 20% 18%, rgba(34, 66, 139, 0.34), transparent 68%),
+    radial-gradient(980px 620px at 78% 26%, rgba(14, 116, 144, 0.28), transparent 72%),
+    linear-gradient(140deg, #02060f 0%, #060f1f 44%, #0a1730 100%);
   background-size: 260% 260%;
-  animation: backgroundShift 11s ease-in-out infinite;
+  animation: backgroundShift 9.5s ease-in-out infinite;
   color: #e5efff;
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
@@ -2630,6 +2633,34 @@ body.theme-night .welcome-bg::after {
   opacity: 0.42;
   animation: nightDrift 9s ease-in-out infinite;
   pointer-events: none;
+}
+
+body.theme-night .welcome-bg::before {
+  content: '';
+  position: absolute;
+  inset: -22%;
+  background:
+    radial-gradient(circle at 15% 30%, rgba(56, 189, 248, 0.16) 0 9%, transparent 16%),
+    radial-gradient(circle at 42% 64%, rgba(147, 197, 253, 0.14) 0 8%, transparent 15%),
+    radial-gradient(circle at 70% 20%, rgba(59, 130, 246, 0.15) 0 10%, transparent 16%),
+    radial-gradient(circle at 88% 72%, rgba(56, 189, 248, 0.12) 0 7%, transparent 14%);
+  mix-blend-mode: screen;
+  filter: blur(18px);
+  opacity: 0.38;
+  animation: wateryFlow 12s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes wateryFlow {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1.04) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(-3%, 2%, 0) scale(1.08) rotate(2.5deg);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1.04) rotate(0deg);
+  }
 }
 
 @keyframes nightDrift {
