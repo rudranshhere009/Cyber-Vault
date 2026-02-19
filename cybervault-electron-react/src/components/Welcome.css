@@ -1,5 +1,8 @@
 /* Welcome Page Styles - Enhanced */
 
+/* load futuristic sans‑serif fonts for the hero */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@700;900&family=Exo+2:wght@700;900&display=swap');
+
 .welcome-container {
   min-height: 100vh;
   width: 100%;
@@ -11,7 +14,7 @@
   animation: backgroundShift 18s ease-in-out infinite;
   position: relative;
   overflow: hidden;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Orbitron', 'Rajdhani', 'Exo 2', 'Neuropol', 'JetBrains Mono', monospace;
 }
 
 .welcome-container::before,
@@ -648,26 +651,33 @@
 }
 
 .welcome-title {
-  font-size: 110px;
-  font-weight: 1000;
-  color: #ffffff;
-  margin: 0 auto;
+  /* use a futuristic sans-serif stack and make it look like a cyber vault header */
+  font-family: 'Orbitron', 'Rajdhani', 'Exo 2', 'Neuropol', sans-serif;
+  font-size: 120px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  line-height: 1.1;
+  margin: 0 auto 0.5rem auto;
   position: relative;
   z-index: 2;
-  letter-spacing: 2px;
-  text-shadow: none;
   display: block;
   text-align: center;
-  font-style: normal;
-  line-height: 1.2;
-  font-family: 'JetBrains Mono', monospace;
-  white-space: normal;
-  word-break: break-word;
-  background: #5d8fc7;
-  padding: 30px 50px;
-  border-radius: 15px;
+
+  /* gradient text + subtle glow */
+  background: linear-gradient(135deg, #79a3d9 0%, #5d8fc7 50%, #9fb3df 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 8px rgba(121,163,217,0.6),
+               0 0 16px rgba(93,143,199,0.4);
+
+  /* remove old card styling */
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
   border: none;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
 }
 
 .shield-icon {
