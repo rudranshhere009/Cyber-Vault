@@ -499,29 +499,20 @@ function FaceModal({ mode, open, onClose, onRegistered, onAuthenticated }) {
 
   if (!open) return null;
   return (
-    <div style={{ 
-      position: 'fixed', 
-      inset: 0, 
-      background: 'linear-gradient(135deg, rgba(212, 227, 240, 0.98), rgba(150, 168, 199, 0.98))',  
-      zIndex: 10000, 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center' 
-    }}>
-    
-      <div style={{ background: 'linear-gradient(145deg, var(--glass-bg), rgba(15, 15, 25, 0.95))', border: '1px solid var(--border-glow)', borderRadius: 16, padding: 16, width: 520, boxShadow: '0 0 50px rgba(0, 212, 255, 0.2)' }}>
-        <div className="neural-title" style={{ fontSize: 22, marginBottom: 8 }}>{mode === 'register' ? 'Register Face' : 'Face Login'}</div>
-        <div className="password-status" style={{ marginBottom: 6 }}>
+    <div className="confirm-overlay biometric-overlay">
+      <div className="biometric-panel">
+        <div className="confirm-title biometric-title">{mode === 'register' ? 'Register Face' : 'Face Login'}</div>
+        <div className="password-status biometric-status">
           {loading ? 'Loading...' : message}
         </div>
-        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>
-          Tips: keep your face centered, remove glare, and hold still for 2–3 seconds.
+        <div className="biometric-tip">
+          Tips: keep your face centered, remove glare, and hold still for 2-3 seconds.
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8, position: 'relative' }}>
-          <video ref={videoRef} width="480" height="360" style={{ borderRadius: 12, border: '1px solid var(--border-glow)', background: '#000', transform: 'scaleX(-1)' }} muted playsInline />
+        <div className="biometric-video-wrap">
+          <video ref={videoRef} className="biometric-video" muted playsInline />
           <div className="face-cutout-frame"></div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <div className="biometric-actions">
           <button className="cyber-btn btn-secondary" onClick={onClose}>Cancel</button>
         </div>
       </div>
@@ -4166,19 +4157,18 @@ function App() {
       )}
 
       {locked && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'linear-gradient(145deg, var(--glass-bg), rgba(15, 15, 25, 0.95))', border: '1px solid var(--border-glow)', borderRadius: 16, padding: 24, width: 360, boxShadow: '0 0 50px rgba(0, 212, 255, 0.2)' }}>
-            <div className="neural-title" style={{ fontSize: 24, marginBottom: 12 }}>Vault Locked</div>
-            <div className="password-status" style={{ marginBottom: 10 }}>Enter neural key to unlock</div>
+        <div className="confirm-overlay vault-lock-overlay">
+          <div className="confirm-panel vault-lock-panel">
+            <div className="confirm-title vault-lock-title">Vault Locked</div>
+            <div className="confirm-message vault-lock-sub">Enter neural key to unlock</div>
             <form onSubmit={attemptUnlock}>
               <input type="password" className="password-input" placeholder="Enter quantum passphrase..." value={lockInput} onChange={e => setLockInput(e.target.value)} />
-              <button type="submit" className="submit-btn" style={{ marginTop: 12 }}>🔓 Unlock</button>
+              <button type="submit" className="submit-btn vault-lock-submit">Unlock</button>
             </form>
-            {/* NEW: Added all biometric unlock options */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-              <button type="button" className="cyber-btn btn-primary" style={{ minWidth: '80px' }} onClick={attemptFaceUnlock}>🙂 Face</button>
-              <button type="button" className="cyber-btn btn-primary" style={{ minWidth: '80px' }} onClick={attemptIrisUnlock}>👁️ Iris</button>
-              <button type="button" className="cyber-btn btn-primary" style={{ minWidth: '120px' }} onClick={attemptFingerprintUnlock}>👆 Fingerprint</button>
+            <div className="vault-lock-biometric-actions">
+              <button type="button" className="cyber-btn btn-primary" onClick={attemptFaceUnlock}>Face</button>
+              <button type="button" className="cyber-btn btn-primary" onClick={attemptIrisUnlock}>Iris</button>
+              <button type="button" className="cyber-btn btn-primary" onClick={attemptFingerprintUnlock}>Fingerprint</button>
             </div>
           </div>
         </div>
@@ -4306,8 +4296,8 @@ function App() {
 
       {/* NEW: Fingerprint Modal */}
       {fingerprintModalOpen && fingerprintModalData && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(245, 248, 252, 0.98))', border: '1px solid var(--border-glow)', borderRadius: 20, padding: 30, width: '90%', maxWidth: 500, boxShadow: '0 0 50px rgba(159, 179, 223, 0.3)' }}>
+        <div className="confirm-overlay biometric-overlay">
+          <div className="biometric-panel fingerprint-modal-panel">
             <Suspense fallback={null}>
               <FingerprintAuth
                 username={fingerprintModalData.email}
@@ -4328,9 +4318,9 @@ function App() {
                 }}
               />
             </Suspense>
-            <div style={{ textAlign: 'center', marginTop: 20 }}>
-              <button 
-                className="cyber-btn btn-secondary" 
+            <div className="biometric-actions center">
+              <button
+                className="cyber-btn btn-secondary"
                 onClick={() => {
                   setFingerprintModalOpen(false);
                   if (fingerprintModalData.reject) {

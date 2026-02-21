@@ -141,44 +141,24 @@ function IrisModal({ mode, open, onClose, onRegistered, onAuthenticated }) {
   if (!open) return null;
 
   return (
-       <div style={{ 
-    position: 'fixed', 
-    inset: 0, 
-    background: 'linear-gradient(135deg, rgba(212, 227, 240, 0.98), rgba(150, 168, 199, 0.98))',  // ← NEW
-    zIndex: 10000, 
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center' 
-  }}>
-      <div style={{ background: 'linear-gradient(145deg, var(--glass-bg), rgba(15, 15, 25, 0.95))', border: '1px solid var(--border-glow)', borderRadius: 16, padding: 16, width: 520, boxShadow: '0 0 50px rgba(0, 212, 255, 0.2)' }}>
-        <div className="neural-title" style={{ fontSize: 22, marginBottom: 8 }}>
-          👁️ {mode === 'register' ? 'Register Iris' : 'Iris Authentication'}
+    <div className="confirm-overlay biometric-overlay">
+      <div className="biometric-panel">
+        <div className="confirm-title biometric-title">
+          {mode === 'register' ? 'Register Iris' : 'Iris Authentication'}
         </div>
-        <div className="password-status" style={{ marginBottom: 6 }}>
+        <div className="password-status biometric-status">
           {loading ? 'Loading...' : message}
         </div>
-        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: 8 }}>
+        <div className="biometric-tip">
           Tips: keep your eye centered, avoid glare, and hold still without blinking.
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8, position: 'relative' }}>
-          <video ref={videoRef} width="480" height="360" style={{ borderRadius: 12, border: '1px solid var(--border-glow)', background: '#000', transform: 'scaleX(-1)' }} muted playsInline />
-          {/* Iris targeting circle */}
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '100px',
-            height: '100px',
-            border: '2px solid var(--primary-cyan)',
-            borderRadius: '50%',
-            boxShadow: '0 0 20px rgba(0, 212, 255, 0.5)',
-            pointerEvents: 'none'
-          }} />
+        <div className="biometric-video-wrap">
+          <video ref={videoRef} className="biometric-video" muted playsInline />
+          <div className="iris-target-circle" />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+        <div className="biometric-actions spread">
           <button className="cyber-btn btn-secondary" onClick={onClose}>Cancel</button>
-          <div style={{ color: 'var(--primary-cyan)', fontSize: '12px' }}>
+          <div className="biometric-counter">
             Samples: {samples.length}/{isMobileCapture() ? 4 : 3}
           </div>
         </div>
