@@ -623,7 +623,14 @@ function App() {
   const [profileNotice, setProfileNotice] = useState('');
 
   const [page, setPage] = useState('welcome');
-  const handleContinueToLogin = useCallback(() => setPage('login'), []);
+  const handleGoToLogin = useCallback(() => {
+    setMode('login');
+    setPage('login');
+  }, []);
+  const handleGoToSignup = useCallback(() => {
+    setMode('signup');
+    setPage('login');
+  }, []);
   const [missionOpen, setMissionOpen] = useState(false);
   const [mode, setMode] = useState('login');
   const [loading, setLoading] = useState({ visible: false, message: '' });
@@ -2891,7 +2898,7 @@ function App() {
   return (
     <div>
       {page === 'welcome' && (
-        <Welcome onContinue={handleContinueToLogin} />
+        <Welcome onLogin={handleGoToLogin} onSignup={handleGoToSignup} />
       )}
 
       {page === 'login' && (

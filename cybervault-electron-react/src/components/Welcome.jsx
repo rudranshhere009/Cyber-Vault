@@ -1,288 +1,109 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React from 'react';
 import './Welcome.css';
 
-function Welcome({ onContinue }) {
-  const [installModalOpen, setInstallModalOpen] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [canInstall, setCanInstall] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
-  const [installMessage, setInstallMessage] = useState('');
-  const releasesUrl = 'https://github.com/rudranshhere009/Cyber-Vault/releases/latest';
+function Welcome({ onLogin, onSignup, onContinue }) {
+  const featurePills = [
+    'Encrypted Workspace',
+    'Biometric Access',
+    'Threat Intelligence',
+    'Audit Ready',
+  ];
 
-  const isIOS = useMemo(() => {
-    const ua = window.navigator.userAgent.toLowerCase();
-    return /iphone|ipad|ipod/.test(ua);
-  }, []);
+  const modules = [
+    {
+      title: 'Secure Conversations',
+      text: 'Operate in a private, encrypted command space for sensitive files and actions.',
+    },
+    {
+      title: 'Identity Guard',
+      text: 'Use password and biometric checkpoints to protect every access attempt.',
+    },
+    {
+      title: 'Operational Memory',
+      text: 'Track activity history, anomalies, and trust posture from one interface.',
+    },
+  ];
 
-  const desktopPlatform = useMemo(() => {
-    const ua = window.navigator.userAgent.toLowerCase();
-    if (ua.includes('windows')) return 'windows';
-    if (ua.includes('mac')) return 'mac';
-    if (ua.includes('linux')) return 'linux';
-    return 'other';
-  }, []);
-
-  useEffect(() => {
-    const standalone = window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator.standalone;
-    if (standalone) setIsInstalled(true);
-
-    const onBeforeInstallPrompt = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setCanInstall(true);
-    };
-
-    const onAppInstalled = () => {
-      setIsInstalled(true);
-      setCanInstall(false);
-      setDeferredPrompt(null);
-      setInstallMessage('App installed successfully. Launch CyberVault from your apps list/home screen.');
-    };
-
-    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
-    window.addEventListener('appinstalled', onAppInstalled);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', onAppInstalled);
-    };
-  }, []);
-
-  const pamphlets = useMemo(
-    () => [
-      {
-        icon: '\u{1F512}',
-        title: 'Military-Grade Encryption',
-        description: 'Your data is protected with AES-256 encryption for high-security local protection.',
-        color: '#5d8fc7',
-        stat: '256-bit',
-        statLabel: 'AES'
-      },
-      {
-        icon: '\u{1F9EC}',
-        title: 'Biometric Authentication',
-        description: 'Secure access with facial recognition, iris scanning, and fingerprint verification.',
-        color: '#79a3d9',
-        stat: '3x',
-        statLabel: 'Biometric'
-      },
-      {
-        icon: '\u{26A1}',
-        title: 'Lightning Fast',
-        description: 'Fast encryption and decryption flows optimized for local device use.',
-        color: '#9fb3df',
-        stat: '<1ms',
-        statLabel: 'Processing'
-      },
-      {
-        icon: '\u{1F6E1}\u{FE0F}',
-        title: 'Zero-Trust Architecture',
-        description: 'Private keys stay on your device. You control your vault data end-to-end.',
-        color: '#b2c9e8',
-        stat: '100%',
-        statLabel: 'Private'
-      }
-    ],
-    []
-  );
-
-  const openInstallModal = () => {
-    setInstallMessage('');
-    setInstallModalOpen(true);
-  };
-
-  const handleInstallNow = async () => {
-    if (!deferredPrompt) {
-      setInstallMessage('Install prompt is not available yet. Use browser menu -> Install app / Add to Home Screen.');
+  const handleLogin = () => {
+    if (onLogin) {
+      onLogin();
       return;
     }
+    if (onContinue) onContinue();
+  };
 
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setInstallMessage('Installation started.');
-      setInstallModalOpen(false);
-    } else {
-      setInstallMessage('Install dismissed. You can try again.');
+  const handleSignup = () => {
+    if (onSignup) {
+      onSignup();
+      return;
     }
-
-    setDeferredPrompt(null);
-    setCanInstall(false);
+    if (onContinue) onContinue();
   };
-
-  const openDesktopDownloads = (platformLabel) => {
-    setInstallMessage(`Opening desktop downloads for ${platformLabel}. Choose installer from release assets.`);
-    window.open(releasesUrl, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleContinueClick = () => onContinue();
 
   return (
-    <div className="welcome-container">
-      <div className="welcome-bg">
-        <div className="gradient-overlay"></div>
-      </div>
+    <div className="welcome-gptx">
+      <div className="ambient ambient-a" aria-hidden="true" />
+      <div className="ambient ambient-b" aria-hidden="true" />
+      <div className="mesh" aria-hidden="true" />
 
-      <div className="grid-bg"></div>
-      <div className="welcome-glide-overlay" aria-hidden="true"></div>
+      <header className="top-nav">
+        <div className="brand">
+          <span className="brand-core" />
+          <span className="brand-name">CyberVault</span>
+        </div>
+        <nav className="nav-links">
+          <button type="button">Product</button>
+          <button type="button">Security</button>
+          <button type="button">Docs</button>
+        </nav>
+        <div className="nav-actions">
+          <button className="nav-btn ghost" onClick={handleLogin}>Log in</button>
+          <button className="nav-btn solid" onClick={handleSignup}>Sign up</button>
+        </div>
+      </header>
 
-      <button className="install-fab" onClick={openInstallModal} title={isInstalled ? 'App installed' : 'Download app'}>
-        {'\u2726'}
-      </button>
-
-      <div className="welcome-content">
-        <div className="welcome-header">
-          <div className="logo-container">
-            <h1 className="welcome-title">
-              <span className="title-word">CYBER</span>
-              <span className="title-word">VAULT</span>
-            </h1>
-          </div>
-          <p className="welcome-description">
-            Experience secure local storage powered by modern encryption and biometric authentication.
+      <main className="hero-shell">
+        <section className="hero-main">
+          <div className="hero-kicker">CyberVault Intelligence Platform</div>
+          <h1>
+            Secure operations,
+            <span>reimagined for modern teams.</span>
+          </h1>
+          <p>
+            A full redesign inspired by GPT-style product pages, now with brighter blue accents and a cleaner, faster path into your vault.
           </p>
-        </div>
 
-        <div className="stats-bar">
-          <div className="stat-item">
-            <div className="stat-icon">{'\u{1F512}'}</div>
-            <span className="stat-value">256-bit</span>
-            <span className="stat-label">Encryption</span>
-            <div className="stat-glow"></div>
+          <div className="hero-actions">
+            <button className="hero-btn primary" onClick={handleSignup}>Get Started</button>
+            <button className="hero-btn secondary" onClick={handleLogin}>Open Vault</button>
           </div>
-          <div className="stat-divider"></div>
-          <div className="stat-item">
-            <div className="stat-icon">{'\u{1F9EC}'}</div>
-            <span className="stat-value">3x</span>
-            <span className="stat-label">Auth Methods</span>
-            <div className="stat-glow"></div>
-          </div>
-          <div className="stat-divider"></div>
-          <div className="stat-item">
-            <div className="stat-icon">{'\u{1F6E1}\u{FE0F}'}</div>
-            <span className="stat-value">100%</span>
-            <span className="stat-label">Private</span>
-            <div className="stat-glow"></div>
-          </div>
-        </div>
 
-        <div className="pamphlets-section">
-          <div className="section-label">Core Features</div>
-          <div className="pamphlets-container">
-            {pamphlets.map((item, index) => (
-              <div
-                key={index}
-                className="pamphlet"
-                style={{
-                  '--color': item.color,
-                  '--delay': `${index * 0.1}s`,
-                  '--index': index
-                }}
-              >
-                <div className="pamphlet-background"></div>
-                <div className="pamphlet-inner">
-                  <div className="pamphlet-stat">
-                    <span className="stat-big">{item.stat}</span>
-                    <span className="stat-small">{item.statLabel}</span>
-                  </div>
-                  <div className="pamphlet-icon">{item.icon}</div>
-                  <h3 className="pamphlet-title">{item.title}</h3>
-                  <p className="pamphlet-text">{item.description}</p>
-                </div>
-              </div>
+          <div className="pill-row">
+            {featurePills.map((pill) => (
+              <span key={pill} className="feature-pill">{pill}</span>
             ))}
           </div>
-        </div>
+        </section>
 
-        <div className="security-section">
-          <div className="security-card">
-            <div className="security-icon">{'\u{1F510}'}</div>
-            <div className="security-content">
-              <h4>End-to-End Encryption</h4>
-              <p>All data is encrypted locally before storage.</p>
-            </div>
+        <section className="hero-panel">
+          <div className="panel-head">Live Security Overview</div>
+          <div className="signal-line">
+            <span className="signal-dot" />
+            <span>All systems active</span>
           </div>
-          <div className="security-card">
-            <div className="security-icon">{'\u{269B}\u{FE0F}'}</div>
-            <div className="security-content">
-              <h4>Quantum Ready</h4>
-              <p>Future-oriented cryptography baseline for secure storage.</p>
-            </div>
+
+          <div className="module-grid">
+            {modules.map((item, index) => (
+              <article key={item.title} className="module-card" style={{ animationDelay: `${index * 0.12}s` }}>
+                <h3>{item.title}</h3>
+                <p>{item.text}</p>
+              </article>
+            ))}
           </div>
-          <div className="security-card">
-            <div className="security-icon">{'\u{2699}\u{FE0F}'}</div>
-            <div className="security-content">
-              <h4>Zero Configuration</h4>
-              <p>Secure defaults with easy onboarding.</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="cta-section">
-          <button className="welcome-btn primary" onClick={handleContinueClick}>
-            <span className="btn-text">
-              <span className="btn-word">Access</span>
-              <span className="btn-word">Your</span>
-              <span className="btn-word">Vault</span>
-            </span>
-            <span className="btn-dot" aria-hidden="true">{'\u{1F4E6}'}</span>
-          </button>
-        </div>
-
-        <div className="welcome-accent">
-          <div className="accent-line"></div>
-          <div className="accent-line"></div>
-        </div>
-      </div>
-
-      {installModalOpen && (
-        <div className="install-overlay">
-          <div className="install-modal">
-            <div className="install-title">{'\u{1F4F2} Install CyberVault App'}</div>
-            <div className="install-subtitle">Use CyberVault like a native app on laptop or phone.</div>
-
-            {isInstalled ? (
-              <div className="install-note success">CyberVault is already installed on this device.</div>
-            ) : canInstall ? (
-              <div className="install-note">One-click install is available on this browser.</div>
-            ) : (
-              <div className="install-note">
-                Direct prompt not available. Use browser menu and choose <strong>Install app</strong> or <strong>Add to Home Screen</strong>.
-              </div>
-            )}
-
-            <div className="install-steps">
-              <div>Desktop Chrome/Edge: menu (three dots) -> Install app</div>
-              <div>Android Chrome: menu (three dots) -> Install app</div>
-              {isIOS && <div>iPhone Safari: Share -> Add to Home Screen</div>}
-            </div>
-
-            <div className="install-desktop">
-              <div className="install-desktop-title">💻 Desktop App Install</div>
-              <div className="install-desktop-sub">
-                Recommended: {desktopPlatform === 'windows' ? 'Windows Installer' : desktopPlatform === 'mac' ? 'macOS Build' : desktopPlatform === 'linux' ? 'Linux Build' : 'Latest Release Assets'}
-              </div>
-              <div className="install-desktop-actions">
-                <button className="cyber-btn btn-secondary" onClick={() => openDesktopDownloads('Windows')}>🪟 Windows</button>
-                <button className="cyber-btn btn-secondary" onClick={() => openDesktopDownloads('macOS')}>🍎 macOS</button>
-                <button className="cyber-btn btn-secondary" onClick={() => openDesktopDownloads('Linux')}>🐧 Linux</button>
-              </div>
-            </div>
-
-            {installMessage && <div className="install-message">{installMessage}</div>}
-
-            <div className="install-actions">
-              <button className="cyber-btn btn-secondary" onClick={() => setInstallModalOpen(false)}>Close</button>
-              <button className="cyber-btn btn-primary" onClick={handleInstallNow} disabled={isInstalled}>
-                {isInstalled ? 'Installed' : 'Install Now'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        </section>
+      </main>
     </div>
   );
 }
 
 export default React.memo(Welcome);
-
