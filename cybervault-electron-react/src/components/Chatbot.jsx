@@ -55,6 +55,135 @@ const formatFileSize = (bytes) => {
 	return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
+const decodeXmlEntities = (value = '') => value
+	.replace(/&amp;/g, '&')
+	.replace(/&lt;/g, '<')
+	.replace(/&gt;/g, '>')
+	.replace(/&quot;/g, '"')
+	.replace(/&apos;/g, "'")
+	.replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+	.replace(/&#(\d+);/g, (_, d) => String.fromCharCode(parseInt(d, 10)));
+
+const extractLinksFromText = (text = '') => {
+	const links = new Set();
+	const regex = /\bhttps?:\/\/[^\s<>"'`)\]]+/gi;
+	let match;
+	while ((match = regex.exec(text)) !== null) {
+		const clean = match[0].replace(/[.,;:!?]+$/g, '');
+		if (clean) links.add(clean);
+	}
+	return Array.from(links);
+};
+
+const readU16 = (arr, offset) => arr[offset] | (arr[offset + 1] << 8);
+const readU32 = (arr, offset) => (arr[offset] | (arr[offset + 1] << 8) | (arr[offset + 2] << 16) | (arr[offset + 3] << 24)) >>> 0;
+
+const inflateRaw = async (bytes) => {
+	const ds = new DecompressionStream('deflate-raw');
+	const stream = new Blob([bytes]).stream().pipeThrough(ds);
+	const buf = await new Response(stream).arrayBuffer();
+	return new Uint8Array(buf);
+};
+
+const extractDocxTextAndLinks = async (arrayBuffer) => {
+	const bytes = new Uint8Array(arrayBuffer);
+	const sigEOCD = 0x06054b50;
+	const sigCD = 0x02014b50;
+	const sigLocal = 0x04034b50;
+
+	let eocd = -1;
+	for (let i = Math.max(0, bytes.length - 65557); i <= bytes.length - 22; i += 1) {
+		if (readU32(bytes, i) === sigEOCD) eocd = i;
+	}
+	if (eocd === -1) throw new Error('Invalid DOCX container');
+
+	const cdSize = readU32(bytes, eocd + 12);
+	const cdOffset = readU32(bytes, eocd + 16);
+	const decoder = new TextDecoder('utf-8');
+	const entries = new Map();
+	let p = cdOffset;
+	const cdEnd = cdOffset + cdSize;
+
+	while (p < cdEnd && readU32(bytes, p) === sigCD) {
+		const compression = readU16(bytes, p + 10);
+		const compSize = readU32(bytes, p + 20);
+		const nameLen = readU16(bytes, p + 28);
+		const extraLen = readU16(bytes, p + 30);
+		const commentLen = readU16(bytes, p + 32);
+		const localOffset = readU32(bytes, p + 42);
+		const nameStart = p + 46;
+		const name = decoder.decode(bytes.subarray(nameStart, nameStart + nameLen));
+		entries.set(name, { compression, compSize, localOffset });
+		p += 46 + nameLen + extraLen + commentLen;
+	}
+
+	const readEntry = async (name) => {
+		const entry = entries.get(name);
+		if (!entry) return null;
+		const local = entry.localOffset;
+		if (readU32(bytes, local) !== sigLocal) return null;
+		const localNameLen = readU16(bytes, local + 26);
+		const localExtraLen = readU16(bytes, local + 28);
+		const dataStart = local + 30 + localNameLen + localExtraLen;
+		const payload = bytes.subarray(dataStart, dataStart + entry.compSize);
+		if (entry.compression === 0) return payload;
+		if (entry.compression === 8) return await inflateRaw(payload);
+		return null;
+	};
+
+	const xmlFiles = [
+		'word/document.xml',
+		'word/header1.xml',
+		'word/header2.xml',
+		'word/header3.xml',
+		'word/footer1.xml',
+		'word/footer2.xml',
+		'word/footer3.xml',
+		'word/footnotes.xml',
+		'word/endnotes.xml',
+		'word/comments.xml',
+	];
+	const relationFiles = [
+		'word/_rels/document.xml.rels',
+		'word/_rels/header1.xml.rels',
+		'word/_rels/header2.xml.rels',
+		'word/_rels/header3.xml.rels',
+		'word/_rels/footer1.xml.rels',
+		'word/_rels/footer2.xml.rels',
+		'word/_rels/footer3.xml.rels',
+	];
+
+	const chunks = [];
+	const links = new Set();
+
+	for (const name of xmlFiles) {
+		const content = await readEntry(name);
+		if (!content) continue;
+		const xml = decoder.decode(content);
+		const normalized = xml
+			.replace(/<w:tab[^>]*\/>/g, '\t')
+			.replace(/<w:br[^>]*\/>/g, '\n')
+			.replace(/<\/w:p>/g, '\n');
+		const text = decodeXmlEntities(normalized.replace(/<[^>]+>/g, ' ')).replace(/\s+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+		if (text) chunks.push(text);
+		extractLinksFromText(xml).forEach((l) => links.add(l));
+	}
+
+	for (const relName of relationFiles) {
+		const relContent = await readEntry(relName);
+		if (!relContent) continue;
+		const relText = decoder.decode(relContent);
+		const targetRegex = /Target="(https?:\/\/[^"]+)"/gi;
+		let m;
+		while ((m = targetRegex.exec(relText)) !== null) {
+			links.add(decodeXmlEntities(m[1]));
+		}
+	}
+
+	const merged = chunks.join('\n\n').trim();
+	return { text: merged, links: Array.from(links) };
+};
+
 const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, generateChecksum, ensureMasterPassword, showNotification, isDemo = false }) => {
 	const hasElectron = Boolean(window.electronAPI);
 	const [messages, setMessages] = useState([]);
@@ -66,6 +195,8 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 	const [isThinking, setIsThinking] = useState(false);
 	const [isListening, setIsListening] = useState(false);
 	const [ocrQuery, setOcrQuery] = useState('');
+	const [ocrLinks, setOcrLinks] = useState([]);
+	const [showExternalLinks, setShowExternalLinks] = useState(false);
 	const ocrSearchRef = useRef(null);
 	const [ocrType, setOcrType] = useState('all');
 	const messagesEndRef = useRef(null);
@@ -81,7 +212,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 			if (ocrType !== 'all') {
 				if (ocrType === 'pdf' && f.type !== 'application/pdf') return false;
 				if (ocrType === 'image' && !(f.type || '').startsWith('image/')) return false;
-				if (ocrType === 'text' && !(f.type || '').startsWith('text/')) return false;
+				if (ocrType === 'text' && !((f.type || '').startsWith('text/') || f.type === 'application/msword' || f.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || /\.docx?$/i.test(f.name || ''))) return false;
 			}
 			if (!q) return true;
 			return f.name.toLowerCase().includes(q);
@@ -172,8 +303,11 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 	const extractTextFromFile = async (file) => {
 		setIsExtracting(true);
 		setOcrText('');
+		setOcrLinks([]);
+		setShowExternalLinks(false);
 		setExtractError('');
 		let text = '';
+		const foundLinks = new Set();
 		try {
 			const buffer = await getDecryptedFileBuffer(file, { idbGet, deriveQuantumKey, generateChecksum, ensureMasterPassword, showNotification });
 
@@ -211,18 +345,24 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 				const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
 				let pdfText = '';
 				for (let i = 1; i <= pdf.numPages; i++) {
+					showNotification(`> processing.pdf.page.${i}.of.${pdf.numPages}`, 'info');
 					const page = await pdf.getPage(i);
 					const content = await page.getTextContent();
 					const line = content.items.map(item => item.str).join(' ').trim();
 					if (line) pdfText += line + '\n';
+					const annotations = await page.getAnnotations();
+					annotations.forEach((a) => {
+						if (a?.url) foundLinks.add(a.url);
+						if (a?.unsafeUrl) foundLinks.add(a.unsafeUrl);
+					});
 				}
 				text = pdfText;
 
-				// If no extractable text, run OCR on first pages
+				// If no extractable text, run OCR on all pages
 				if (!text.trim()) {
 					showNotification('> running.ocr.on.scanned.pdf', 'info');
 					let ocrResult = '';
-					const pagesToScan = Math.min(3, pdf.numPages);
+					const pagesToScan = pdf.numPages;
 					for (let i = 1; i <= pagesToScan; i++) {
 						const page = await pdf.getPage(i);
 						const viewport = page.getViewport({ scale: 2.0 });
@@ -234,18 +374,40 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 						const dataUrl = canvas.toDataURL('image/png');
 						const { data: { text: pageText } } = await Tesseract.recognize(dataUrl, 'eng', { logger: m => {/* no-op */} });
 						if (pageText && pageText.trim()) {
-							ocrResult += pageText.trim() + '\n';
+							ocrResult += pageText.trim() + '\n\n';
 						}
 					}
 					text = ocrResult;
 				}
 			}
 
+			// 4. DOCX extraction
+			if (!text && (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || /\.docx$/i.test(file.name || ''))) {
+				showNotification('> parsing.docx.document', 'info');
+				const docxResult = await extractDocxTextAndLinks(buffer);
+				text = docxResult.text || '';
+				(docxResult.links || []).forEach((l) => foundLinks.add(l));
+			}
+
+			// 5. Legacy DOC: best-effort text decode
+			if (!text && (file.type === 'application/msword' || /\.doc$/i.test(file.name || ''))) {
+				showNotification('> parsing.legacy.doc.best.effort', 'info');
+				const raw = dec.decode(buffer);
+				text = raw.replace(/[^\x09\x0A\x0D\x20-\x7E]/g, ' ').replace(/\s{2,}/g, ' ').trim();
+			}
+
 			const normalized = (text || '').trim();
 			if (normalized) {
-				setOcrText(text);
+				const mergedLinks = new Set([...foundLinks, ...extractLinksFromText(normalized)]);
+				const linksArr = Array.from(mergedLinks);
+				setOcrText(normalized);
+				setOcrLinks(linksArr);
+				if (linksArr.length > 0) {
+					showNotification(`> external.links.detected.${linksArr.length}`, 'success');
+				}
 			} else {
 				setOcrText('[No extractable text found]');
+				setOcrLinks([]);
 			}
 
 		} catch (err) {
@@ -470,6 +632,8 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 			]);
 			setCurrentFile(null);
 			setOcrText('');
+			setOcrLinks([]);
+			setShowExternalLinks(false);
 			setInput('');
 			setExtractError('');
 		}
@@ -589,16 +753,37 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 								>
 									Download TXT
 								</button>
+								<button
+									className={`cyber-btn btn-secondary ${showExternalLinks ? 'active' : ''}`}
+									onClick={() => setShowExternalLinks((prev) => !prev)}
+									disabled={!ocrText}
+								>
+									External Links {ocrLinks.length ? `(${ocrLinks.length})` : ''}
+								</button>
 							</div>
 
 							{extractError && <div className="ocr-error">OCR Error: {extractError}</div>}
+							{showExternalLinks && (
+								<div className="ocr-links-panel">
+									<div className="ocr-panel-title">External Links</div>
+									{ocrLinks.length ? (
+										<div className="ocr-links-list">
+											{ocrLinks.map((link, idx) => (
+												<a key={`${link}-${idx}`} href={link} target="_blank" rel="noreferrer" className="ocr-link-item">{link}</a>
+											))}
+										</div>
+									) : (
+										<div className="ocr-muted">No external links found in this document.</div>
+									)}
+								</div>
+							)}
 						</div>
 
 						<div className="ocr-panel">
 							<div className="ocr-panel-title">Extracted Text Preview</div>
 							<div className="ocr-preview">
 								{ocrText ? (
-									<div style={{ whiteSpace: 'pre-wrap' }}>{ocrText.slice(0, 1200)}{ocrText.length > 1200 ? '...' : ''}</div>
+									<div style={{ whiteSpace: 'pre-wrap' }}>{ocrText}</div>
 								) : (
 									<div className="ocr-muted">No text extracted yet.</div>
 								)}
