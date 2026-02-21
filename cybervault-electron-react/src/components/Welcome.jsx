@@ -1,7 +1,7 @@
 import React from 'react';
 import './Welcome.css';
 
-function Welcome({ onLogin, onSignup, onContinue }) {
+function Welcome({ onLogin, onSignup, onDemo, onContinue }) {
   const highlights = [
     'Zero-trust encryption pipeline',
     'Biometric and password access layers',
@@ -45,6 +45,14 @@ function Welcome({ onLogin, onSignup, onContinue }) {
   const handleSignup = () => {
     if (onSignup) {
       onSignup();
+      return;
+    }
+    if (onContinue) onContinue();
+  };
+
+  const handleDemo = () => {
+    if (onDemo) {
+      onDemo();
       return;
     }
     if (onContinue) onContinue();
@@ -111,6 +119,19 @@ function Welcome({ onLogin, onSignup, onContinue }) {
                 <div className="stat-label">{stat.label}</div>
               </article>
             ))}
+          </div>
+
+          <div className="demo-panel">
+            <div className="demo-title">Demo Mode</div>
+            <p className="demo-copy">
+              Try CyberVault without creating an account. You can explore the complete experience, navigation, and security workflow in a guided demo session.
+            </p>
+            <ul className="demo-list">
+              <li>No login required to enter the vault workspace</li>
+              <li>Upload is limited to one file in demo mode</li>
+              <li>Use this for preview, onboarding, and training</li>
+            </ul>
+            <button className="access-btn secondary demo-btn" onClick={handleDemo}>Try Demo Mode</button>
           </div>
 
           <div className="status-strip">

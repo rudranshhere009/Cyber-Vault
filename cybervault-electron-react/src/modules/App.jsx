@@ -142,6 +142,22 @@ function randomHex(bytes = 6) {
   return Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+function buildDefaultProfile(overrides = {}) {
+  return {
+    displayName: '',
+    title: 'Vault Operator',
+    email: '',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+    accent: '#7aa2ff',
+    avatarUrl: '',
+    plan: 'Neural Pro',
+    createdAt: new Date().toISOString(),
+    deviceId: `CV-${randomHex(4).toUpperCase()}`,
+    notifyDigest: true,
+    ...overrides,
+  };
+}
+
 function buildRecoveryCodes(count = 8) {
   return Array.from({ length: count }, () => `${randomHex(2).toUpperCase()}-${randomHex(2).toUpperCase()}`);
 }
@@ -599,18 +615,7 @@ function App() {
       const saved = JSON.parse(localStorage.getItem('cyberProfile') || 'null');
       if (saved) return saved;
     } catch {}
-    return {
-      displayName: '',
-      title: 'Vault Operator',
-      email: '',
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-      accent: '#7aa2ff',
-      avatarUrl: '',
-      plan: 'Neural Pro',
-      createdAt: new Date().toISOString(),
-      deviceId: `CV-${randomHex(4).toUpperCase()}`,
-      notifyDigest: true,
-    };
+    return buildDefaultProfile();
   });
   const [recoveryCodes, setRecoveryCodes] = useState(() => {
     try {
@@ -621,6 +626,7 @@ function App() {
     }
   });
   const [profileNotice, setProfileNotice] = useState('');
+  const [demoAccessNotice, setDemoAccessNotice] = useState({ open: false, feature: '' });
 
   const [page, setPage] = useState('welcome');
   const handleGoToLogin = useCallback(() => {
@@ -631,6 +637,64 @@ function App() {
     setMode('signup');
     setPage('login');
   }, []);
+  const clearDemoSessionArtifacts = useCallback(async (email, currentFiles = []) => {
+    const normalizedEmail = normalizeEmail(email) || 'demo@cybervault.local';
+    try {
+      for (const f of currentFiles || []) {
+        if (f?.dataId) {
+          try { await idbDelete(f.dataId); } catch {}
+          if (window.electronAPI?.deleteVaultBlob) {
+            try { await window.electronAPI.deleteVaultBlob(`${f.dataId}.bin`); } catch {}
+          }
+        }
+      }
+    } catch {}
+    try {
+      const keys = filesLegacyKeysFor(normalizedEmail);
+      for (const key of keys) {
+        localStorage.removeItem(key);
+        try { await idbDeleteMeta(key); } catch {}
+      }
+    } catch {}
+    if (window.electronAPI?.readVaultIndex && window.electronAPI?.writeVaultIndex) {
+      try {
+        const idx = await window.electronAPI.readVaultIndex() || {};
+        delete idx[vaultIndexKey(normalizedEmail)];
+        await window.electronAPI.writeVaultIndex(idx);
+      } catch {}
+    }
+    setFiles([]);
+    setPreviewData(null);
+    setSelectedFileId(null);
+    setPreviewOpen(false);
+    setViewingFile(null);
+    setViewingFileContent(null);
+    setThreatEvents([]);
+    setThreatAlerts([]);
+    setActivityEvents([]);
+    setComplianceStatus({});
+  }, []);
+
+  const startDemoMode = useCallback(async () => {
+    await clearDemoSessionArtifacts('demo@cybervault.local', []);
+    const demoSession = {
+      email: 'demo@cybervault.local',
+      username: 'Demo User',
+      loginTime: new Date().toISOString(),
+      demo: true,
+    };
+    saveSession(demoSession);
+    setProfile(buildDefaultProfile({
+      displayName: 'Demo User',
+      title: 'Demo Session',
+      email: 'demo@cybervault.local',
+      accent: '#ff9a4a',
+      plan: 'Guest',
+    }));
+    setMode('login');
+    setPage('vault');
+    showNotification('> demo.mode.active.one.file.limit.enabled', 'info');
+  }, [saveSession, clearDemoSessionArtifacts]);
   const [missionOpen, setMissionOpen] = useState(false);
   const [mode, setMode] = useState('login');
   const [loading, setLoading] = useState({ visible: false, message: '' });
@@ -741,6 +805,16 @@ function App() {
 
   useEffect(() => {
     if (!session) return;
+    if (session.demo) {
+      setProfile(buildDefaultProfile({
+        displayName: 'Demo User',
+        title: 'Demo Session',
+        email: 'demo@cybervault.local',
+        accent: '#ff9a4a',
+        plan: 'Guest',
+      }));
+      return;
+    }
     setProfile(prev => {
       const next = { ...prev };
       if (!next.displayName && session.username) next.displayName = session.username;
@@ -751,12 +825,14 @@ function App() {
   }, [session]);
 
   useEffect(() => {
+    if (session?.demo) return;
     try { localStorage.setItem('cyberProfile', JSON.stringify(profile)); } catch {}
-  }, [profile]);
+  }, [profile, session?.demo]);
 
   useEffect(() => {
+    if (session?.demo) return;
     try { localStorage.setItem('cvRecoveryCodes', JSON.stringify(recoveryCodes)); } catch {}
-  }, [recoveryCodes]);
+  }, [recoveryCodes, session?.demo]);
 
   useEffect(() => {
     if (mode !== 'signup') return;
@@ -950,6 +1026,7 @@ function App() {
   useEffect(() => {
     if (page !== 'vault') return;
     if (!autoLockEnabled) return;
+    if (session?.demo) return;
     let timer;
     const reset = () => {
       clearTimeout(timer);
@@ -967,16 +1044,20 @@ function App() {
       clearTimeout(timer);
       events.forEach(ev => window.removeEventListener(ev, reset));
     };
-  }, [page, autoLockEnabled, autoLockMs]);
+  }, [page, autoLockEnabled, autoLockMs, session?.demo]);
 
   useEffect(() => {
+    if (session?.demo) return;
     localStorage.setItem('autoLockEnabled', String(autoLockEnabled));
     localStorage.setItem('autoLockMinutes', String(autoLockMinutes));
-  }, [autoLockEnabled, autoLockMinutes]);
+  }, [autoLockEnabled, autoLockMinutes, session?.demo]);
 
-  const profileDisplayName = profile.displayName || session?.username || 'User';
-  const headerIdentity = (profile.title && profile.title.trim()) || (profile.displayName && profile.displayName.trim()) || session?.username || 'Nickname / Position';
-  const profileEmail = profile.email || session?.email || '';
+  const isDemoSession = !!session?.demo;
+  const profileDisplayName = isDemoSession ? 'Demo User' : (profile.displayName || session?.username || 'User');
+  const headerIdentity = isDemoSession
+    ? 'Hi, Demo User'
+    : ((profile.title && profile.title.trim()) || (profile.displayName && profile.displayName.trim()) || session?.username || 'Nickname / Position');
+  const profileEmail = isDemoSession ? 'demo@cybervault.local' : (profile.email || session?.email || '');
   const profileCreatedAt = profile.createdAt ? new Date(profile.createdAt) : new Date();
   const profileCreatedLabel = `${profileCreatedAt.toLocaleDateString()} • ${profileCreatedAt.toLocaleTimeString()}`;
 
@@ -1104,20 +1185,24 @@ function App() {
   };
 
   useEffect(() => {
+    if (session?.demo) return;
     localStorage.setItem('threatEvents', JSON.stringify(threatEvents));
-  }, [threatEvents]);
+  }, [threatEvents, session?.demo]);
 
   useEffect(() => {
+    if (session?.demo) return;
     localStorage.setItem('alertChannelEnabled', String(alertChannelEnabled));
-  }, [alertChannelEnabled]);
+  }, [alertChannelEnabled, session?.demo]);
 
   useEffect(() => {
+    if (session?.demo) return;
     localStorage.setItem('activityEvents', JSON.stringify(activityEvents));
-  }, [activityEvents]);
+  }, [activityEvents, session?.demo]);
 
   useEffect(() => {
+    if (session?.demo) return;
     localStorage.setItem('complianceStatus', JSON.stringify(complianceStatus));
-  }, [complianceStatus]);
+  }, [complianceStatus, session?.demo]);
 
   function switchMode(next) { setMode(next); }
 
@@ -1729,13 +1814,38 @@ function App() {
     }
   }
 
+  async function exitDemoMode() {
+    const demoEmail = session?.email || 'demo@cybervault.local';
+    await clearDemoSessionArtifacts(demoEmail, files);
+    clearSession();
+    setProfileOpen(false);
+    setMissionOpen(false);
+    setDemoAccessNotice({ open: false, feature: '' });
+    setPage('login');
+    setMode('login');
+    setLocked(false);
+    setMasterPassword('');
+    setLoginPassword('');
+  }
+
+  function handleRestrictedDemoFeature(feature) {
+    if (!session?.demo) return;
+    setDemoAccessNotice({ open: true, feature });
+  }
+
   function logout() {
     openConfirm({
       title: 'Confirm Session Termination',
       message: 'You will be logged out and redirected to the login page.',
       confirmText: 'Logout',
       cancelText: 'Cancel',
-      onConfirm: () => {
+      onConfirm: async () => {
+        if (session?.demo) {
+          await exitDemoMode();
+          setConfirmState(prev => ({ ...prev, open: false, onConfirm: null }));
+          showNotification('> demo.session.terminated.and.cleaned', 'success');
+          return;
+        }
         setConfirmState(prev => ({ ...prev, open: false, onConfirm: null }));
         clearSession();
         setPage('login');
@@ -1828,13 +1938,25 @@ function App() {
   }
 
   async function handleFiles(fileList) {
+    const incoming = Array.from(fileList || []);
+    if (incoming.length === 0) return;
+    if (session?.demo) {
+      if (files.length >= 1) {
+        showNotification('> demo.mode.limit.reached.only.one.file.allowed', 'error');
+        return;
+      }
+      if (incoming.length > 1) {
+        showNotification('> demo.mode.allows.single.file.upload', 'error');
+        return;
+      }
+    }
     let pwd = masterPassword;
     if (!pwd || pwd.length < 8) {
       try { pwd = await ensureMasterPassword(); } catch { showNotification('> neural.key.required.for.encryption', 'error'); return; }
     }
     setIsUploading(true);
     try {
-      for (const file of Array.from(fileList)) {
+      for (const file of incoming) {
         await new Promise(requestAnimationFrame);
         await encryptAndStoreFile(file, pwd);
       }
@@ -2265,6 +2387,12 @@ function App() {
 
   async function attemptUnlock(e) {
     e?.preventDefault?.();
+    if (session?.demo) {
+      setLocked(false);
+      setLockInput('');
+      showNotification('> demo.session.unlocked', 'success');
+      return;
+    }
     const pwd = lockInput;
     if (!pwd || pwd.length < 8) { addThreatEvent('unlock_failed', 'weak_passphrase'); showNotification('> neural.key.insufficient.minimum_8_chars', 'error'); return; }
 
@@ -2898,7 +3026,7 @@ function App() {
   return (
     <div>
       {page === 'welcome' && (
-        <Welcome onLogin={handleGoToLogin} onSignup={handleGoToSignup} />
+        <Welcome onLogin={handleGoToLogin} onSignup={handleGoToSignup} onDemo={startDemoMode} />
       )}
 
       {page === 'login' && (
@@ -3019,10 +3147,21 @@ function App() {
               <div className="header-top">
                 <div className="brand-block">
                   <div className="brand-title">CyberVault</div>
+                  {session?.demo && <div className="demo-session-pill">Demo Mode • 1 file limit</div>}
                 </div>
                 <div className="header-actions">
-                  <button className="cyber-btn btn-secondary" onClick={() => setMissionOpen(true)} aria-label="Open Mission Mode">🎯 Missions</button>
-                  <button className="profile-badge" onClick={() => setProfileOpen(true)} aria-label="Open profile settings">
+                  <button
+                    className="cyber-btn btn-secondary"
+                    onClick={() => (session?.demo ? handleRestrictedDemoFeature('Mission Control') : setMissionOpen(true))}
+                    aria-label="Open Mission Mode"
+                  >
+                    🎯 Missions
+                  </button>
+                  <button
+                    className="profile-badge"
+                    onClick={() => (session?.demo ? handleRestrictedDemoFeature('Profile Center') : setProfileOpen(true))}
+                    aria-label="Open profile settings"
+                  >
                     <span className="profile-avatar" style={{ '--accent': profile.accent }}>
                       {profile.avatarUrl ? (
                         <img className="profile-avatar-img" src={profile.avatarUrl} alt={profileDisplayName} />
@@ -3032,7 +3171,7 @@ function App() {
                     </span>
                     <span className="profile-tooltip">
                       <span className="profile-tooltip-name">{profileDisplayName}</span>
-                      <span className="profile-tooltip-role">{profile.title}</span>
+                      <span className="profile-tooltip-role">{session?.demo ? 'Guest Trial Session' : profile.title}</span>
                     </span>
                   </button>
                   <button className="logout-btn" onClick={logout}>Logout</button>
@@ -3151,7 +3290,7 @@ function App() {
                     <span className="upload-tag">Biometric Ready</span>
                   </div>
                   {isUploading && <div className="uploading-hint">Encrypting files…</div>}
-                  <input type="file" id="fileInput" ref={fileInputRef} multiple onChange={e => handleFiles(e.target.files)} />
+                  <input type="file" id="fileInput" ref={fileInputRef} multiple={!session?.demo} onChange={e => handleFiles(e.target.files)} />
                 </div>
 
                 <div className="pulse-deck">
@@ -3941,6 +4080,29 @@ function App() {
             <div className="anomaly-info-title">{getAnomalyInfo(anomalyInfo.event).title}</div>
             <div className="anomaly-info-body">{getAnomalyInfo(anomalyInfo.event).body}</div>
             <button className="drawer-btn" onClick={() => setAnomalyInfo({ open: false, event: null })}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {demoAccessNotice.open && (
+        <div className="confirm-overlay" onClick={() => setDemoAccessNotice({ open: false, feature: '' })}>
+          <div className="confirm-panel demo-gate-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-title">Demo Access Limited</div>
+            <div className="confirm-message">
+              {demoAccessNotice.feature} is locked in demo mode. You are using a guest trial session with limited access and one-file upload. Log in or sign up to unlock full CyberVault capabilities.
+            </div>
+            <div className="confirm-actions">
+              <button className="cyber-btn btn-secondary" onClick={() => setDemoAccessNotice({ open: false, feature: '' })}>Continue Demo</button>
+              <button
+                className="cyber-btn btn-primary"
+                onClick={async () => {
+                  await exitDemoMode();
+                  showNotification('> login.required.for.full.access', 'info');
+                }}
+              >
+                Go to Login
+              </button>
+            </div>
           </div>
         </div>
       )}

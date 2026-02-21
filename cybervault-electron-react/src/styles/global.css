@@ -1624,6 +1624,65 @@ body.theme-night .file-context-menu button:hover { background: rgba(51, 65, 85, 
   border: 1px solid rgba(255, 153, 73, 0.42);
 }
 
+.login-page .demo-mode-card {
+  border: 1px solid rgba(255, 153, 73, 0.34);
+  background: linear-gradient(145deg, rgba(30, 19, 12, 0.86), rgba(19, 13, 10, 0.9));
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.login-page .demo-mode-title {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffbd8a;
+}
+
+.login-page .demo-mode-text {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #ffd7bb;
+}
+
+.login-page .demo-mode-btn {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 153, 73, 0.72);
+  background: linear-gradient(135deg, #ffb26f, #ff7a17);
+  color: #2b1300;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.login-page .demo-mode-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(255, 122, 23, 0.35);
+}
+
+.demo-session-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 153, 73, 0.48);
+  background: linear-gradient(145deg, rgba(30, 19, 12, 0.82), rgba(19, 13, 10, 0.86));
+  color: #ffd4b4;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  padding: 5px 10px;
+}
+
 /* Hard override: force auth box palette to black-orange (no blue leakage) */
 .login-page,
 .login-page * {
@@ -1850,6 +1909,25 @@ body.theme-night .file-context-menu button:hover { background: rgba(51, 65, 85, 
     border-radius: 10px !important;
   }
 
+  .login-page .demo-mode-card {
+    margin-bottom: 12px !important;
+    padding: 10px !important;
+    border-radius: 10px !important;
+  }
+
+  .login-page .demo-mode-title {
+    font-size: 11px !important;
+  }
+
+  .login-page .demo-mode-text {
+    font-size: 11px !important;
+  }
+
+  .login-page .demo-mode-btn {
+    min-height: 40px !important;
+    font-size: 11px !important;
+  }
+
   .login-page .security-title {
     font-size: 12px !important;
   }
@@ -1860,25 +1938,526 @@ body.theme-night .file-context-menu button:hover { background: rgba(51, 65, 85, 
   }
 
   .login-page .back-to-welcome-btn {
-    top: max(8px, env(safe-area-inset-top)) !important;
-    left: max(8px, env(safe-area-inset-left)) !important;
-    padding: 7px !important;
+    top: max(10px, calc(env(safe-area-inset-top) + 2px)) !important;
+    left: max(10px, calc(env(safe-area-inset-left) + 2px)) !important;
+    padding: 8px !important;
     gap: 0 !important;
     font-size: 0 !important;
     border-radius: 999px !important;
-    min-width: 34px !important;
-    min-height: 34px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
     justify-content: center !important;
+    box-shadow:
+      0 10px 20px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(255, 132, 31, 0.26) inset !important;
   }
 
   .login-page .back-to-welcome-btn .back-icon {
-    width: 19px !important;
-    height: 19px !important;
-    font-size: 12px !important;
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 14px !important;
     margin: 0 !important;
   }
 
   .login-page .back-to-welcome-btn span:not(.back-icon) {
     display: none !important;
   }
+}
+
+/* Unified black-orange theme for full vault experience */
+body.theme-night {
+  --primary-lavender: #ffb26f !important;
+  --primary-purple: #ff8f2d !important;
+  --primary-violet: #ff6a00 !important;
+  --border-glow: rgba(255, 153, 73, 0.42) !important;
+  --text-primary: #ffe8d6 !important;
+  --text-secondary: #d7a987 !important;
+  --text-accent: #ffd7bb !important;
+  --glass-bg: rgba(24, 17, 12, 0.84) !important;
+  --card-bg: rgba(20, 14, 10, 0.9) !important;
+  background:
+    radial-gradient(circle at 14% 10%, rgba(255, 132, 31, 0.18), transparent 34%),
+    radial-gradient(circle at 86% 84%, rgba(255, 106, 0, 0.16), transparent 38%),
+    linear-gradient(145deg, #040404, #0e0e0e 45%, #050505) !important;
+  color: #ffe8d6 !important;
+}
+
+body.theme-night::before {
+  background:
+    linear-gradient(rgba(255, 138, 36, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 138, 36, 0.05) 1px, transparent 1px),
+    linear-gradient(145deg, #040404, #0e0e0e 45%, #050505) !important;
+  background-size: 52px 52px, 52px 52px, auto !important;
+  opacity: 1 !important;
+}
+
+body.theme-night .header,
+body.theme-night .sidebar,
+body.theme-night .main-content,
+body.theme-night .auth-form-container,
+body.theme-night .security-info,
+body.theme-night .cyber-section,
+body.theme-night .drawer-intro,
+body.theme-night .drawer-card,
+body.theme-night .preview-panel,
+body.theme-night .profile-panel,
+body.theme-night .confirm-panel,
+body.theme-night .ocr-panel,
+body.theme-night .mini-card,
+body.theme-night .activity-command,
+body.theme-night .command-actions,
+body.theme-night .command-lenses,
+body.theme-night .storage-card,
+body.theme-night .storage-visual-card,
+body.theme-night .compliance-card,
+body.theme-night .threat-grid .threat-card,
+body.theme-night .threat-feed-item,
+body.theme-night .file-card {
+  background: linear-gradient(160deg, rgba(20, 14, 10, 0.92), rgba(12, 11, 11, 0.96)) !important;
+  border-color: rgba(255, 146, 52, 0.34) !important;
+  box-shadow:
+    0 16px 34px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 144, 50, 0.1) !important;
+}
+
+body.theme-night .upload-zone {
+  background:
+    radial-gradient(circle at 16% 20%, rgba(255, 153, 73, 0.12), transparent 56%),
+    linear-gradient(160deg, rgba(20, 14, 10, 0.92), rgba(12, 11, 11, 0.96)) !important;
+  border-color: rgba(255, 153, 73, 0.42) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 144, 50, 0.1),
+    0 14px 32px rgba(0, 0, 0, 0.45) !important;
+}
+
+body.theme-night .menu-item,
+body.theme-night .drawer-btn,
+body.theme-night .lens-btn,
+body.theme-night .lens-chip,
+body.theme-night .summary-pill,
+body.theme-night .profile-avatar-picker,
+body.theme-night .upload-tag {
+  background: linear-gradient(160deg, rgba(28, 18, 12, 0.84), rgba(17, 13, 11, 0.88)) !important;
+  border-color: rgba(255, 153, 73, 0.42) !important;
+  color: #ffd7bb !important;
+}
+
+body.theme-night .menu-item.active,
+body.theme-night .lens-btn.active,
+body.theme-night .submit-btn,
+body.theme-night .cyber-btn.btn-primary,
+body.theme-night .logout-btn {
+  background: linear-gradient(135deg, #ffb26f, #ff7a17) !important;
+  border-color: rgba(255, 153, 73, 0.78) !important;
+  color: #2b1300 !important;
+  box-shadow: 0 10px 24px rgba(255, 122, 23, 0.34) !important;
+}
+
+body.theme-night .cyber-btn.btn-secondary,
+body.theme-night .drawer-input,
+body.theme-night .form-input,
+body.theme-night .password-input,
+body.theme-night .header-search,
+body.theme-night select.drawer-input {
+  background: rgba(24, 17, 12, 0.9) !important;
+  border-color: rgba(255, 153, 73, 0.42) !important;
+  color: #ffe5d1 !important;
+}
+
+body.theme-night .form-input::placeholder,
+body.theme-night .password-input::placeholder,
+body.theme-night .drawer-input::placeholder,
+body.theme-night .header-search::placeholder {
+  color: #d7a987 !important;
+}
+
+body.theme-night .brand-title,
+body.theme-night .neural-title,
+body.theme-night .drawer-title,
+body.theme-night .profile-title,
+body.theme-night .ocr-title-text,
+body.theme-night .stat-number,
+body.theme-night .storage-value,
+body.theme-night .threat-card-value,
+body.theme-night .kpi-value {
+  color: #ffbd8a !important;
+  -webkit-text-fill-color: #ffbd8a !important;
+  text-shadow: 0 0 8px rgba(255, 132, 31, 0.22) !important;
+}
+
+body.theme-night .panel-title,
+body.theme-night .security-title,
+body.theme-night .form-label,
+body.theme-night .badge-text,
+body.theme-night .greeting-subtitle,
+body.theme-night .upload-subtext,
+body.theme-night .profile-subtitle {
+  color: #f2bc94 !important;
+}
+
+body.theme-night .security-features,
+body.theme-night .drawer-help,
+body.theme-night .drawer-value,
+body.theme-night .profile-note,
+body.theme-night .trend-sub,
+body.theme-night .stat-label,
+body.theme-night .feed-time,
+body.theme-night .file-size {
+  color: #ffd7bb !important;
+}
+
+body.theme-night .security-features li::before,
+body.theme-night .status-dot,
+body.theme-night .badge-icon,
+body.theme-night .panel-icon {
+  color: #ff9b4f !important;
+}
+
+body.theme-night .header-status,
+body.theme-night .greeting-card,
+body.theme-night .security-badge,
+body.theme-night .sidebar-action.btn-primary,
+body.theme-night .sidebar-action.btn-secondary,
+body.theme-night .sidebar-action .action-icon,
+body.theme-night .upload-icon-text,
+body.theme-night .secure-clipboard-pill,
+body.theme-night .profile-badge,
+body.theme-night .profile-tooltip {
+  background: linear-gradient(145deg, rgba(28, 18, 12, 0.84), rgba(17, 13, 11, 0.9)) !important;
+  border-color: rgba(255, 153, 73, 0.4) !important;
+  color: #ffd7bb !important;
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.42),
+    inset 0 0 0 1px rgba(255, 132, 31, 0.12) !important;
+}
+
+body.theme-night .menu-item .menu-icon,
+body.theme-night .sidebar-action .action-icon,
+body.theme-night .upload-icon,
+body.theme-night .profile-avatar {
+  color: #ffb26f !important;
+}
+
+body.theme-night .upload-text,
+body.theme-night .drawer-title,
+body.theme-night .confirm-title,
+body.theme-night .profile-tooltip-name {
+  color: #ffe8d6 !important;
+}
+
+body.theme-night .stat-divider,
+body.theme-night .accent-line,
+body.theme-night .profile-divider {
+  background: linear-gradient(180deg, transparent, rgba(255, 153, 73, 0.5), transparent) !important;
+}
+
+/* Exhaustive catch-all for remaining legacy blue night-theme components */
+body.theme-night .mission-panel,
+body.theme-night .vaultpet-panel,
+body.theme-night .ocr-modal.mission,
+body.theme-night .feature-drawer,
+body.theme-night .ocr-modal,
+body.theme-night .ocr-header,
+body.theme-night .ocr-preview,
+body.theme-night .ocr-msg.bot,
+body.theme-night .ocr-file-row,
+body.theme-night .timeline-card,
+body.theme-night .preview-content,
+body.theme-night .file-context-menu,
+body.theme-night .empty-state,
+body.theme-night .pulse-deck,
+body.theme-night .pulse-wave,
+body.theme-night .pulse-kpi,
+body.theme-night .activity-stat,
+body.theme-night .activity-item,
+body.theme-night .anomaly-item,
+body.theme-night .anomaly-info-modal,
+body.theme-night .shield-gauge,
+body.theme-night .heatbar,
+body.theme-night .anomaly-snapshot,
+body.theme-night .risk-card,
+body.theme-night .command-insight,
+body.theme-night .storage-donut::after,
+body.theme-night .threat-score-ring::after,
+body.theme-night .threat-signal,
+body.theme-night .export-option {
+  background: linear-gradient(160deg, rgba(20, 14, 10, 0.92), rgba(12, 11, 11, 0.96)) !important;
+  border-color: rgba(255, 146, 52, 0.34) !important;
+  color: #ffd7bb !important;
+}
+
+body.theme-night .header::before,
+body.theme-night .sidebar::before,
+body.theme-night .cyber-section::before,
+body.theme-night .greeting-status-glow,
+body.theme-night .greeting-rail span,
+body.theme-night .auth-form-container::before,
+body.theme-night .security-info::before {
+  background: linear-gradient(90deg, transparent, rgba(255, 153, 73, 0.5), transparent) !important;
+}
+
+body.theme-night .greeting-rail,
+body.theme-night .bar-track,
+body.theme-night .heat-bar {
+  background: rgba(255, 153, 73, 0.22) !important;
+}
+
+body.theme-night .heatbar-bar,
+body.theme-night .bar-track span,
+body.theme-night .heat-bar span,
+body.theme-night .mission-panel .small-btn,
+body.theme-night .vaultpet-xpfill,
+body.theme-night .ocr-msg.user,
+body.theme-night .ocr-filter.active,
+body.theme-night .menu-item.active,
+body.theme-night .activity-chip,
+body.theme-night .anomaly-badge,
+body.theme-night .export-badge,
+body.theme-night .file-tag,
+body.theme-night .feed-pill {
+  background: linear-gradient(135deg, #ffb26f, #ff7a17) !important;
+  color: #2b1300 !important;
+  border-color: rgba(255, 153, 73, 0.72) !important;
+}
+
+body.theme-night .anomaly-badge.warn,
+body.theme-night .anomaly-badge.bad {
+  background: linear-gradient(135deg, #ff9f43, #ff6a00) !important;
+  color: #2b1300 !important;
+}
+
+body.theme-night .profile-input,
+body.theme-night .ocr-input-row input,
+body.theme-night .ocr-input-row textarea,
+body.theme-night .ocr-input-row .password-input,
+body.theme-night .ocr-picker-input,
+body.theme-night .ocr-filter,
+body.theme-night .anomaly-info-btn,
+body.theme-night .drawer-close,
+body.theme-night .file-context-menu button {
+  background: rgba(24, 17, 12, 0.9) !important;
+  border-color: rgba(255, 153, 73, 0.42) !important;
+  color: #ffe5d1 !important;
+}
+
+body.theme-night .profile-input::placeholder,
+body.theme-night .ocr-input-row input::placeholder,
+body.theme-night .ocr-input-row textarea::placeholder {
+  color: #d7a987 !important;
+}
+
+body.theme-night .ocr-title-text,
+body.theme-night .ocr-panel-title,
+body.theme-night .activity-title,
+body.theme-night .threat-score,
+body.theme-night .shield-score,
+body.theme-night .risk-value,
+body.theme-night .compliance-value,
+body.theme-night .storage-value,
+body.theme-night .feed-text {
+  color: #ffe8d6 !important;
+}
+
+body.theme-night .ocr-subtitle,
+body.theme-night .ocr-muted,
+body.theme-night .ocr-file-meta,
+body.theme-night .threat-score-label,
+body.theme-night .heatbar-title,
+body.theme-night .heatbar-legend,
+body.theme-night .anomaly-note,
+body.theme-night .risk-label,
+body.theme-night .compliance-sub,
+body.theme-night .storage-sub,
+body.theme-night .storage-legend,
+body.theme-night .trend-label,
+body.theme-night .command-sub,
+body.theme-night .insight-label,
+body.theme-night .feed-time {
+  color: #f2bc94 !important;
+}
+
+/* Final vault-wide night override (eliminates any leftover legacy blue surfaces) */
+body.theme-night .profile-card,
+body.theme-night .kpi,
+body.theme-night .timeline-card,
+body.theme-night .preview-panel,
+body.theme-night .preview-content,
+body.theme-night .pulse-deck,
+body.theme-night .pulse-wave,
+body.theme-night .pulse-kpi,
+body.theme-night .empty-state,
+body.theme-night .file-context-menu,
+body.theme-night .file-view-modal,
+body.theme-night .file-view-content,
+body.theme-night .ocr-overlay,
+body.theme-night .ocr-modal,
+body.theme-night .ocr-header,
+body.theme-night .ocr-panel,
+body.theme-night .ocr-preview,
+body.theme-night .ocr-file-row,
+body.theme-night .ocr-msg.bot,
+body.theme-night .anomaly-info-modal,
+body.theme-night .feature-drawer,
+body.theme-night .drawer-overlay {
+  background: linear-gradient(160deg, rgba(18, 12, 9, 0.95), rgba(9, 9, 9, 0.96)) !important;
+  border-color: rgba(255, 146, 52, 0.34) !important;
+  color: #ffd7bb !important;
+}
+
+body.theme-night .profile-avatar {
+  background: radial-gradient(circle at 28% 22%, rgba(255, 198, 144, 0.38), transparent 46%),
+    radial-gradient(circle at 74% 82%, rgba(0, 0, 0, 0.34), transparent 44%),
+    linear-gradient(135deg, #ffb26f, #ff7a17 72%, #ff5d00) !important;
+  box-shadow: 0 12px 24px rgba(255, 122, 23, 0.3) !important;
+  color: #2b1300 !important;
+}
+
+body.theme-night .greeting-status-glow,
+body.theme-night .greeting-rail span,
+body.theme-night .header::before,
+body.theme-night .sidebar::before {
+  background: linear-gradient(90deg, transparent, rgba(255, 146, 52, 0.5), transparent) !important;
+}
+
+body.theme-night .activity-command::before,
+body.theme-night .threat-deck::before {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(255, 153, 73, 0.18), transparent 44%),
+    radial-gradient(circle at 92% 4%, rgba(255, 106, 0, 0.16), transparent 42%) !important;
+}
+
+body.theme-night .activity-chip,
+body.theme-night .anomaly-badge,
+body.theme-night .export-badge,
+body.theme-night .file-tag,
+body.theme-night .feed-pill,
+body.theme-night .secure-clipboard-pill {
+  background: linear-gradient(135deg, #ffb26f, #ff7a17) !important;
+  color: #2b1300 !important;
+  border-color: rgba(255, 153, 73, 0.72) !important;
+}
+
+body.theme-night .anomaly-badge.warn,
+body.theme-night .anomaly-badge.bad {
+  background: linear-gradient(135deg, #ff9f43, #ff6a00) !important;
+  color: #2b1300 !important;
+}
+
+body.theme-night .heatbar-bar,
+body.theme-night .bar-track span,
+body.theme-night .trend-bar span,
+body.theme-night .heat-bar span,
+body.theme-night .vaultpet-xpfill,
+body.theme-night .mission-panel .small-btn,
+body.theme-night .ocr-filter.active,
+body.theme-night .ocr-msg.user {
+  background: linear-gradient(135deg, #ffb26f, #ff7a17) !important;
+  border-color: rgba(255, 153, 73, 0.72) !important;
+  color: #2b1300 !important;
+}
+
+body.theme-night .bar-track,
+body.theme-night .heat-bar,
+body.theme-night .greeting-rail {
+  background: rgba(255, 153, 73, 0.22) !important;
+}
+
+body.theme-night .storage-donut::after,
+body.theme-night .threat-score-ring::after,
+body.theme-night .pulse-ring::after {
+  background: rgba(18, 12, 9, 0.95) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 153, 73, 0.26) !important;
+}
+
+body.theme-night .profile-input,
+body.theme-night .drawer-input,
+body.theme-night .form-input,
+body.theme-night .password-input,
+body.theme-night .header-search,
+body.theme-night .ocr-input-row input,
+body.theme-night .ocr-input-row textarea,
+body.theme-night .ocr-input-row .password-input,
+body.theme-night .ocr-picker-input,
+body.theme-night .ocr-filter,
+body.theme-night .file-context-menu button,
+body.theme-night .anomaly-info-btn,
+body.theme-night .drawer-close {
+  background: rgba(24, 17, 12, 0.9) !important;
+  border-color: rgba(255, 153, 73, 0.42) !important;
+  color: #ffe5d1 !important;
+}
+
+body.theme-night .profile-input::placeholder,
+body.theme-night .drawer-input::placeholder,
+body.theme-night .form-input::placeholder,
+body.theme-night .password-input::placeholder,
+body.theme-night .header-search::placeholder,
+body.theme-night .ocr-input-row input::placeholder,
+body.theme-night .ocr-input-row textarea::placeholder {
+  color: #d7a987 !important;
+}
+
+body.theme-night .ocr-icon,
+body.theme-night .intro-icon {
+  background: linear-gradient(145deg, rgba(26, 17, 12, 0.95), rgba(12, 10, 10, 0.95)) !important;
+  border-color: rgba(255, 153, 73, 0.5) !important;
+  color: #ffb26f !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 153, 73, 0.18) !important;
+}
+
+body.theme-night .shield-gauge::before {
+  background: conic-gradient(from 180deg, rgba(255, 178, 111, 0.9) var(--pct), rgba(255, 153, 73, 0.22) 0) !important;
+}
+
+body.theme-night .storage-pie {
+  box-shadow: inset 0 0 0 10px rgba(10, 8, 8, 0.62), 0 12px 24px rgba(0, 0, 0, 0.42) !important;
+}
+
+body.theme-night .storage-pie.empty,
+body.theme-night .storage-donut.empty {
+  background: conic-gradient(rgba(255, 153, 73, 0.3) 0 100%) !important;
+}
+
+body.theme-night .storage-donut {
+  background: conic-gradient(#ffb26f 0 var(--pct), rgba(255, 153, 73, 0.2) var(--pct) 100%) !important;
+}
+
+body.theme-night .legend-dot.docs,
+body.theme-night .legend-dot.media,
+body.theme-night .legend-dot.archives,
+body.theme-night .legend-dot.other {
+  background: #ff9a4a !important;
+}
+
+body.theme-night .storage-bar.docs .bar-track span,
+body.theme-night .storage-bar.media .bar-track span,
+body.theme-night .storage-bar.archives .bar-track span,
+body.theme-night .storage-bar.other .bar-track span,
+body.theme-night .trend-bar span,
+body.theme-night .pulse-wave span,
+body.theme-night .pulse-ring {
+  background: linear-gradient(135deg, #ffb26f, #ff7a17) !important;
+}
+
+body.theme-night .global-drop-overlay {
+  background: rgba(8, 6, 6, 0.7) !important;
+}
+
+body.theme-night .global-drop-card {
+  background: linear-gradient(145deg, rgba(18, 12, 9, 0.96), rgba(10, 9, 9, 0.96)) !important;
+  border-color: rgba(255, 153, 73, 0.72) !important;
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.55) !important;
+}
+
+body.theme-night .file-view-overlay.fullscreen,
+body.theme-night .file-view-overlay {
+  background: rgba(6, 5, 5, 0.9) !important;
+}
+
+body.theme-night .demo-gate-panel {
+  border-color: rgba(255, 153, 73, 0.52) !important;
+  background: linear-gradient(145deg, rgba(20, 13, 10, 0.98), rgba(11, 10, 10, 0.98)) !important;
+  box-shadow:
+    0 24px 50px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(255, 153, 73, 0.14) !important;
 }

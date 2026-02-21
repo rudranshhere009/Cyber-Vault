@@ -298,6 +298,48 @@
   animation: ping 1.8s ease-in-out infinite;
 }
 
+.demo-panel {
+  border: 1px solid rgba(255, 153, 73, 0.32);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(29, 18, 12, 0.78), rgba(18, 13, 10, 0.8));
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.demo-title {
+  color: #ffbd8a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.demo-copy {
+  margin: 0;
+  color: #ffd6b6;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.demo-list {
+  margin: 0;
+  padding-left: 16px;
+  display: grid;
+  gap: 5px;
+  color: #f2bc94;
+  font-size: 0.79rem;
+  line-height: 1.4;
+}
+
+.demo-list li::marker {
+  color: #ff9b4f;
+}
+
+.demo-btn {
+  margin-top: 2px;
+}
+
 .ticker-wrap {
   position: absolute;
   left: 0;
@@ -407,7 +449,7 @@
 
 @media (max-width: 640px) {
   .welcome-layout {
-    padding: 36px 14px 88px;
+    padding: 28px 14px 20px;
     gap: 16px;
   }
 
@@ -421,6 +463,37 @@
 
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .demo-panel {
+    padding: 10px;
+  }
+
+  .demo-copy {
+    font-size: 0.8rem;
+  }
+
+  .demo-list {
+    font-size: 0.75rem;
+  }
+
+  .ticker-wrap {
+    position: relative;
+    height: 34px;
+    margin: 10px 0 0;
+    border-top-color: rgba(255, 132, 31, 0.5);
+    border-bottom-color: rgba(255, 132, 31, 0.5);
+  }
+
+  .ticker-track {
+    gap: 18px;
+    padding-left: 12px;
+    animation-duration: 12s;
+  }
+
+  .ticker-track span {
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
   }
 }
 
