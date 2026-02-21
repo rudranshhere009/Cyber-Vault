@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import './Welcome.css';
 
 function Welcome({ onContinue }) {
-  const containerRef = useRef(null);
   const [installModalOpen, setInstallModalOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [canInstall, setCanInstall] = useState(false);
@@ -119,21 +118,8 @@ function Welcome({ onContinue }) {
   const handleContinueClick = () => onContinue();
 
   return (
-    <div className="welcome-container" ref={containerRef}>
+    <div className="welcome-container">
       <div className="welcome-bg">
-        <div className="void-layer"></div>
-        <div className="blob blob-1"></div>
-        <div className="blob blob-2"></div>
-        <div className="blob blob-3"></div>
-        <div className="nebula-layer"></div>
-        <div className="streak-layer"></div>
-        <div className="dust-layer"></div>
-        <div className="ribbon-layer"></div>
-        <div className="pulse-ring-layer"></div>
-        <div className="scan-beam-layer"></div>
-        <div className="glide-wave-layer"></div>
-        <div className="starfield-layer"></div>
-        <div className="film-grain-layer"></div>
         <div className="gradient-overlay"></div>
       </div>
 

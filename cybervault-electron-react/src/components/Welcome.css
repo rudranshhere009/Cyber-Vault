@@ -3371,33 +3371,42 @@ body.theme-night .welcome-title .title-word {
   -webkit-text-fill-color: currentColor !important;
 }
 
+.welcome-description,
+.stats-bar,
+.pamphlet-inner,
+.security-card,
+.welcome-btn {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 .welcome-glide-overlay {
   position: absolute;
   inset: -8%;
   z-index: 11;
   pointer-events: none;
-  opacity: 0.42;
+  opacity: 0.3;
   background: linear-gradient(
     108deg,
     transparent 30%,
-    rgba(170, 214, 255, 0.24) 46%,
-    rgba(170, 214, 255, 0.08) 52%,
+    rgba(170, 214, 255, 0.18) 46%,
+    rgba(170, 214, 255, 0.06) 52%,
     transparent 68%
   );
   mix-blend-mode: normal;
   filter: none;
   will-change: transform, opacity;
-  transform: translate3d(-58%, 0, 0) skewX(-8deg);
-  animation: welcomeGlobalGlide 6.2s ease-in-out infinite !important;
+  transform: translate3d(-44%, 0, 0) skewX(-7deg);
+  animation: welcomeGlobalGlide 8.8s ease-in-out infinite !important;
 }
 
 body.theme-night .welcome-glide-overlay {
-  opacity: 0.5;
+  opacity: 0.38;
   background: linear-gradient(
     108deg,
     transparent 28%,
-    rgba(125, 211, 252, 0.34) 46%,
-    rgba(125, 211, 252, 0.13) 52%,
+    rgba(125, 211, 252, 0.24) 46%,
+    rgba(125, 211, 252, 0.1) 52%,
     transparent 70%
   );
 }
@@ -3410,5 +3419,5 @@ body.theme-night .welcome-glide-overlay {
 }
 
 .welcome-glide-overlay {
-  animation: welcomeGlobalGlide 6.2s ease-in-out infinite !important;
+  animation: welcomeGlobalGlide 8.8s ease-in-out infinite !important;
 }
