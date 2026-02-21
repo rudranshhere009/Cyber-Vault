@@ -369,3 +369,111 @@ ipcMain.handle('openai-ocr-answer', async (event, payload) => {
     return { error: 'exception', detail: String(error) };
   }
 });
+
+ipcMain.handle('openai-ocr-extract-text', async (event, payload) => {
+  try {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) return { error: 'missing_api_key' };
+
+    const model = process.env.OPENAI_VISION_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    };
+    if (process.env.OPENAI_PROJECT) headers['OpenAI-Project'] = process.env.OPENAI_PROJECT;
+    if (process.env.OPENAI_ORG) headers['OpenAI-Organization'] = process.env.OPENAI_ORG;
+
+    const imageDataUrl = payload?.imageDataUrl;
+    if (!imageDataUrl || typeof imageDataUrl !== 'string') {
+      return { error: 'invalid_payload' };
+    }
+
+    const res = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model,
+        temperature: 0,
+        max_output_tokens: 2200,
+        input: [
+          {
+            role: 'system',
+            content: [
+              {
+                type: 'input_text',
+                text: 'You are an OCR engine. Extract all visible text exactly from the image. Keep natural line breaks. Return plain text only.',
+              },
+            ],
+          },
+          {
+            role: 'user',
+            content: [
+              { type: 'input_text', text: 'Extract full text from this document image.' },
+              { type: 'input_image', image_url: imageDataUrl },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      return { error: 'api_error', detail: text };
+    }
+    const data = await res.json();
+    let out = data?.output_text || '';
+    if (!out && Array.isArray(data?.output)) {
+      for (const item of data.output) {
+        if (Array.isArray(item?.content)) {
+          for (const c of item.content) {
+            if (c?.type === 'output_text' && c?.text) out += c.text;
+          }
+        }
+      }
+    }
+    return { data: { text: (out || '').trim() } };
+  } catch (error) {
+    console.error('OpenAI OCR extract error:', error);
+    return { error: 'exception', detail: String(error) };
+  }
+});
+
+ipcMain.handle('google-ocr-extract-text', async (event, payload) => {
+  try {
+    const apiKey = process.env.GOOGLE_VISION_API_KEY;
+    if (!apiKey) return { error: 'missing_api_key' };
+    const imageDataUrl = payload?.imageDataUrl;
+    if (!imageDataUrl || typeof imageDataUrl !== 'string' || !imageDataUrl.startsWith('data:image/')) {
+      return { error: 'invalid_payload' };
+    }
+
+    const base64 = imageDataUrl.split(',')[1] || '';
+    if (!base64) return { error: 'invalid_payload' };
+
+    const endpoint = `https://vision.googleapis.com/v1/images:annotate?key=${encodeURIComponent(apiKey)}`;
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requests: [
+          {
+            image: { content: base64 },
+            features: [{ type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1 }],
+          },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      const detail = await res.text();
+      return { error: 'api_error', detail };
+    }
+
+    const data = await res.json();
+    const text = data?.responses?.[0]?.fullTextAnnotation?.text || data?.responses?.[0]?.textAnnotations?.[0]?.description || '';
+    return { data: { text: String(text || '').trim() } };
+  } catch (error) {
+    console.error('Google OCR extract error:', error);
+    return { error: 'exception', detail: String(error) };
+  }
+});

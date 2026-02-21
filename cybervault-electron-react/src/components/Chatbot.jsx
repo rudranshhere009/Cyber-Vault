@@ -37,14 +37,14 @@ const getDecryptedFileBuffer = async (file, { idbGet, deriveQuantumKey, generate
 
 // Helper: Get file icon by type
 const getFileIcon = (type) => {
-	if (!type) return '📄';
-	if (type.startsWith('image/')) return '🖼️';
-	if (type === 'application/pdf') return '📕';
-	if (type.startsWith('text/')) return '📄';
-	if (type.startsWith('video/')) return '🎞️';
-	if (type.startsWith('audio/')) return '🎵';
-	if (type.includes('zip') || type.includes('rar')) return '🗜️';
-	return '📁';
+	if (!type) return 'FILE';
+	if (type.startsWith('image/')) return 'IMG';
+	if (type === 'application/pdf') return 'PDF';
+	if (type.startsWith('text/')) return 'TXT';
+	if (type.startsWith('video/')) return 'VID';
+	if (type.startsWith('audio/')) return 'AUD';
+	if (type.includes('zip') || type.includes('rar')) return 'ZIP';
+	return 'DOC';
 };
 
 // Helper: Format file size
@@ -64,12 +64,37 @@ const decodeXmlEntities = (value = '') => value
 	.replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
 	.replace(/&#(\d+);/g, (_, d) => String.fromCharCode(parseInt(d, 10)));
 
+const normalizeHttpUrl = (raw = '') => {
+	let s = String(raw || '').trim();
+	if (!s) return null;
+	s = s.replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/^[<(\[]+|[>)\].,;:!?]+$/g, '');
+	if (!s) return null;
+	if (/^mailto:/i.test(s)) return null;
+	if (/^www\./i.test(s)) s = `https://${s}`;
+	if (!/^https?:\/\//i.test(s)) {
+		if (/^[a-z0-9-]+(\.[a-z0-9-]+)+([/:?#].*)?$/i.test(s)) {
+			s = `https://${s}`;
+		} else {
+			return null;
+		}
+	}
+	try {
+		const u = new URL(s);
+		if (!/^https?:$/i.test(u.protocol)) return null;
+		if (!u.hostname || !/\./.test(u.hostname)) return null;
+		if (/^\d+\.\d+\.\d+\.\d+$/.test(u.hostname)) return null;
+		return u.toString();
+	} catch {
+		return null;
+	}
+};
+
 const extractLinksFromText = (text = '') => {
 	const links = new Set();
-	const regex = /\bhttps?:\/\/[^\s<>"'`)\]]+/gi;
+	const regex = /\bhttps?:\/\/[a-z0-9.-]+\.[a-z]{2,}(?:\/[^\s<>"'`)\]]*)?/gi;
 	let match;
 	while ((match = regex.exec(text)) !== null) {
-		const clean = match[0].replace(/[.,;:!?]+$/g, '');
+		const clean = normalizeHttpUrl(match[0]);
 		if (clean) links.add(clean);
 	}
 	return Array.from(links);
@@ -84,6 +109,13 @@ const inflateRaw = async (bytes) => {
 	const buf = await new Response(stream).arrayBuffer();
 	return new Uint8Array(buf);
 };
+
+const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
+	const reader = new FileReader();
+	reader.onload = () => resolve(String(reader.result || ''));
+	reader.onerror = reject;
+	reader.readAsDataURL(blob);
+});
 
 const extractDocxTextAndLinks = async (arrayBuffer) => {
 	const bytes = new Uint8Array(arrayBuffer);
@@ -185,7 +217,6 @@ const extractDocxTextAndLinks = async (arrayBuffer) => {
 };
 
 const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, generateChecksum, ensureMasterPassword, showNotification, isDemo = false }) => {
-	const hasElectron = Boolean(window.electronAPI);
 	const [messages, setMessages] = useState([]);
 	const [input, setInput] = useState('');
 	const [currentFile, setCurrentFile] = useState(null);
@@ -196,7 +227,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 	const [isListening, setIsListening] = useState(false);
 	const [ocrQuery, setOcrQuery] = useState('');
 	const [ocrLinks, setOcrLinks] = useState([]);
-	const [showExternalLinks, setShowExternalLinks] = useState(false);
+	const [isChatOpen, setIsChatOpen] = useState(false);
 	const ocrSearchRef = useRef(null);
 	const [ocrType, setOcrType] = useState('all');
 	const messagesEndRef = useRef(null);
@@ -228,33 +259,16 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 		}
 	};
 
-	// Tagging helpers
-	const getFileTags = async (file) => {
-		if (!hasElectron) return file.tags || [];
-		try {
-			const idx = await window.electronAPI.readVaultIndex();
-			const entry = (idx && idx.files && file.id) ? idx.files[file.id] : null;
-			return (entry && entry.tags) ? entry.tags : (file.tags || []);
-		} catch (e) { return file.tags || []; }
-	};
-
-	const promptAddTag = async (file) => {
-		if (!hasElectron) {
-			showNotification('> tag.update.unavailable.in.web.mode', 'error');
+	const toggleSelectFile = async (file) => {
+		if (currentFile?.id === file?.id) {
+			setCurrentFile(null);
+			setOcrText('');
+			setOcrLinks([]);
+			setExtractError('');
+			setMessages([{ sender: 'bot', text: 'File unselected. Pick another file to extract text.' }]);
 			return;
 		}
-		const tag = prompt('Add a tag for ' + file.name + ' (comma-separated for multiple)');
-		if (!tag) return;
-		const tags = tag.split(',').map(t => t.trim()).filter(Boolean);
-		try {
-			const idx = (await window.electronAPI.readVaultIndex()) || {};
-			idx.files = idx.files || {};
-			const key = file.id || file.name;
-			idx.files[key] = idx.files[key] || {};
-			idx.files[key].tags = Array.from(new Set([...(idx.files[key].tags || []), ...tags]));
-			await window.electronAPI.writeVaultIndex(idx);
-			showNotification('> tags.updated', 'success');
-		} catch (e) { showNotification('> tags.update.failed', 'error'); }
+		await selectOcrFile(file);
 	};
 
 	// Voice input (speech-to-text)
@@ -299,12 +313,25 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 		window.speechSynthesis.speak(utterance);
 	};
 
+	const extractTextWithVision = async (imageDataUrl) => {
+		if (window.electronAPI?.googleOcrExtractText) {
+			const googleRes = await window.electronAPI.googleOcrExtractText({ imageDataUrl });
+			if (!googleRes?.error) {
+				const txt = (googleRes?.data?.text || '').trim();
+				if (txt) return txt;
+			}
+		}
+		if (!window.electronAPI?.openaiOcrExtractText) return '';
+		const res = await window.electronAPI.openaiOcrExtractText({ imageDataUrl });
+		if (res?.error) return '';
+		return (res?.data?.text || '').trim();
+	};
+
 	// Extract text from file (OCR for images, direct for text)
 	const extractTextFromFile = async (file) => {
 		setIsExtracting(true);
 		setOcrText('');
 		setOcrLinks([]);
-		setShowExternalLinks(false);
 		setExtractError('');
 		let text = '';
 		const foundLinks = new Set();
@@ -330,55 +357,80 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 				showNotification('> running.ocr.on.image', 'info');
 				const imgBlob = new Blob([buffer], { type: file.type || 'image/png' });
 				const imgUrl = URL.createObjectURL(imgBlob);
-				const { data: { text: ocrTextResult } } = await Tesseract.recognize(
-					imgUrl,
-					'eng',
-					{ logger: m => {/* Optionally log progress */} }
-				);
+				let ocrTextResult = '';
+				try {
+					const dataUrl = await blobToDataUrl(imgBlob);
+					const visionText = await extractTextWithVision(dataUrl);
+					if (visionText) ocrTextResult = visionText;
+				} catch {}
+				if (!ocrTextResult) {
+					const { data: { text: tesseractText } } = await Tesseract.recognize(
+						imgUrl,
+						'eng',
+						{ logger: () => {} }
+					);
+					ocrTextResult = tesseractText;
+				}
 				URL.revokeObjectURL(imgUrl);
 				text = ocrTextResult;
 			}
 
-			// 3. If PDF, use pdf.js text extraction (fallback to OCR if empty)
+			// 3. If PDF, extract text from every page with hybrid pipeline
 			if (!text && file.type && file.type === 'application/pdf') {
 				showNotification('> running.ocr.on.pdf', 'info');
 				const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
-				let pdfText = '';
+				let mergedPdfText = '';
+				const useVision = Boolean(window.electronAPI?.googleOcrExtractText || window.electronAPI?.openaiOcrExtractText);
 				for (let i = 1; i <= pdf.numPages; i++) {
 					showNotification(`> processing.pdf.page.${i}.of.${pdf.numPages}`, 'info');
 					const page = await pdf.getPage(i);
 					const content = await page.getTextContent();
-					const line = content.items.map(item => item.str).join(' ').trim();
-					if (line) pdfText += line + '\n';
+					const embeddedLine = content.items.map(item => item.str).join(' ').trim();
 					const annotations = await page.getAnnotations();
 					annotations.forEach((a) => {
-						if (a?.url) foundLinks.add(a.url);
-						if (a?.unsafeUrl) foundLinks.add(a.unsafeUrl);
+						if (a?.url) {
+							const clean = normalizeHttpUrl(a.url);
+							if (clean) foundLinks.add(clean);
+						}
+						if (a?.unsafeUrl) {
+							const clean = normalizeHttpUrl(a.unsafeUrl);
+							if (clean) foundLinks.add(clean);
+						}
 					});
-				}
-				text = pdfText;
 
-				// If no extractable text, run OCR on all pages
-				if (!text.trim()) {
-					showNotification('> running.ocr.on.scanned.pdf', 'info');
-					let ocrResult = '';
-					const pagesToScan = pdf.numPages;
-					for (let i = 1; i <= pagesToScan; i++) {
-						const page = await pdf.getPage(i);
-						const viewport = page.getViewport({ scale: 2.0 });
-						const canvas = document.createElement('canvas');
-						const context = canvas.getContext('2d');
-						canvas.width = viewport.width;
-						canvas.height = viewport.height;
-						await page.render({ canvasContext: context, viewport }).promise;
-						const dataUrl = canvas.toDataURL('image/png');
-						const { data: { text: pageText } } = await Tesseract.recognize(dataUrl, 'eng', { logger: m => {/* no-op */} });
-						if (pageText && pageText.trim()) {
-							ocrResult += pageText.trim() + '\n\n';
+					let bestPageText = embeddedLine;
+					const viewport = page.getViewport({ scale: useVision ? 2.8 : 2.2 });
+					const canvas = document.createElement('canvas');
+					const context = canvas.getContext('2d');
+					canvas.width = viewport.width;
+					canvas.height = viewport.height;
+					await page.render({ canvasContext: context, viewport }).promise;
+					const dataUrl = canvas.toDataURL('image/png');
+
+					let visionText = '';
+					if (useVision) {
+						try {
+							visionText = await extractTextWithVision(dataUrl);
+						} catch {}
+					}
+					if (visionText && visionText.length > (embeddedLine?.length || 0) * 1.15) {
+						bestPageText = visionText;
+					}
+
+					if (!bestPageText || bestPageText.length < 30) {
+						const { data: { text: pageText } } = await Tesseract.recognize(dataUrl, 'eng', {
+							logger: () => {},
+							tessedit_pageseg_mode: 6,
+							preserve_interword_spaces: '1',
+						});
+						if (pageText && pageText.length > (bestPageText?.length || 0)) {
+							bestPageText = pageText.trim();
 						}
 					}
-					text = ocrResult;
+
+					if (bestPageText) mergedPdfText += bestPageText.trim() + '\n\n';
 				}
+				text = mergedPdfText.trim();
 			}
 
 			// 4. DOCX extraction
@@ -386,7 +438,10 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 				showNotification('> parsing.docx.document', 'info');
 				const docxResult = await extractDocxTextAndLinks(buffer);
 				text = docxResult.text || '';
-				(docxResult.links || []).forEach((l) => foundLinks.add(l));
+				(docxResult.links || []).forEach((l) => {
+					const clean = normalizeHttpUrl(l);
+					if (clean) foundLinks.add(clean);
+				});
 			}
 
 			// 5. Legacy DOC: best-effort text decode
@@ -633,7 +688,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 			setCurrentFile(null);
 			setOcrText('');
 			setOcrLinks([]);
-			setShowExternalLinks(false);
+			setIsChatOpen(false);
 			setInput('');
 			setExtractError('');
 		}
@@ -675,7 +730,15 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 							<div className="ocr-subtitle">Extract, review, and interrogate vault files with secure OCR</div>
 						</div>
 					</div>
-					<button className="cyber-btn btn-danger" onClick={onClose}>Close</button>
+					<div className="ocr-header-actions">
+						<button className="cyber-btn btn-secondary" onClick={() => {
+							setIsChatOpen(true);
+							if (isDemo) showDemoChatDenied();
+						}}>
+							AI Chatbot
+						</button>
+						<button className="cyber-btn btn-danger" onClick={onClose}>Close</button>
+					</div>
 				</div>
 
 				<div className="ocr-body">
@@ -704,37 +767,54 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 										))}
 									</div>
 								</div>
-								<div className="ocr-picker-list">
+								<div className="ocr-picker-list ocr-picker-list-large">
 									{filteredFiles.length === 0 ? (
 										<div className="ocr-empty">No files match your search.</div>
 									) : (
-											filteredFiles.slice(0, 8).map(f => (
-											<button
-												key={f.id || f.name}
-												className={`ocr-file-row ${currentFile?.id === f.id ? 'active' : ''}`}
-												onClick={() => selectOcrFile(f)}
-											>
-												<span className="ocr-file-icon">{getFileIcon(f.type)}</span>
-												<span className="ocr-file-name">{f.name}</span>
-												<span className="ocr-file-meta">{formatFileSize(f.size)}</span>
-												<button aria-label={`Add tag to ${f.name}`} className="cyber-btn btn-secondary" style={{marginLeft:8}} onClick={(e)=>{ e.stopPropagation(); promptAddTag(f); }}>🏷️</button>
-											</button>
+										filteredFiles.map((f) => (
+											<div className="ocr-file-card" key={f.id || f.name}>
+												<div
+													className={`ocr-file-row ${currentFile?.id === f.id ? 'active' : ''}`}
+													onClick={() => toggleSelectFile(f)}
+													role="button"
+													tabIndex={0}
+													onKeyDown={(e) => {
+														if (e.key === 'Enter' || e.key === ' ') {
+															e.preventDefault();
+															toggleSelectFile(f);
+														}
+													}}
+												>
+													<span className="ocr-file-icon">{getFileIcon(f.type)}</span>
+													<span className="ocr-file-name">{f.name}</span>
+													<span className="ocr-file-meta">{formatFileSize(f.size)}</span>
+													<button
+														className="cyber-btn btn-secondary ocr-select-btn"
+														onClick={(e) => { e.stopPropagation(); toggleSelectFile(f); }}
+													>
+														{currentFile?.id === f.id ? 'Unselect' : 'Select'}
+													</button>
+												</div>
+											</div>
 										))
 									)}
 								</div>
 							</div>
 
 							{currentFile && (
-								<div className="ocr-meta">
-									<div className="ocr-meta-row"><span>File</span><b>{currentFile.name}</b></div>
-									<div className="ocr-meta-row"><span>Tags</span><b>{(currentFile.tags || []).join(', ') || '—'}</b></div>
-									<div className="ocr-meta-row"><span>Type</span><b>{currentFile.type || 'unknown'}</b></div>
-									<div className="ocr-meta-row"><span>Size</span><b>{formatFileSize(currentFile.size)}</b></div>
-									<div className="ocr-meta-row"><span>Uploaded</span><b>{currentFile.uploadDate ? new Date(currentFile.uploadDate).toLocaleDateString() : 'N/A'}</b></div>
+								<div className="ocr-selected-details">
+									<div className="ocr-panel-title">Selected File Details</div>
+									<div className="ocr-meta">
+										<div className="ocr-meta-row"><span>File</span><b>{currentFile.name}</b></div>
+										<div className="ocr-meta-row"><span>Tags</span><b>{(currentFile.tags || []).join(', ') || '-'}</b></div>
+										<div className="ocr-meta-row"><span>Type</span><b>{currentFile.type || 'unknown'}</b></div>
+										<div className="ocr-meta-row"><span>Size</span><b>{formatFileSize(currentFile.size)}</b></div>
+										<div className="ocr-meta-row"><span>Uploaded</span><b>{currentFile.uploadDate ? new Date(currentFile.uploadDate).toLocaleDateString() : 'N/A'}</b></div>
+									</div>
 								</div>
 							)}
 
-							<div className="ocr-actions">
+							<div className="ocr-actions ocr-actions-stacked">
 								<button className="cyber-btn btn-primary" onClick={() => currentFile && extractTextFromFile(currentFile)} disabled={!currentFile || isExtracting}>
 									{isExtracting ? 'Extracting...' : 'Run OCR'}
 								</button>
@@ -753,35 +833,16 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 								>
 									Download TXT
 								</button>
-								<button
-									className={`cyber-btn btn-secondary ${showExternalLinks ? 'active' : ''}`}
-									onClick={() => setShowExternalLinks((prev) => !prev)}
-									disabled={!ocrText}
-								>
-									External Links {ocrLinks.length ? `(${ocrLinks.length})` : ''}
-								</button>
 							</div>
 
 							{extractError && <div className="ocr-error">OCR Error: {extractError}</div>}
-							{showExternalLinks && (
-								<div className="ocr-links-panel">
-									<div className="ocr-panel-title">External Links</div>
-									{ocrLinks.length ? (
-										<div className="ocr-links-list">
-											{ocrLinks.map((link, idx) => (
-												<a key={`${link}-${idx}`} href={link} target="_blank" rel="noreferrer" className="ocr-link-item">{link}</a>
-											))}
-										</div>
-									) : (
-										<div className="ocr-muted">No external links found in this document.</div>
-									)}
-								</div>
-							)}
 						</div>
+					</div>
 
-						<div className="ocr-panel">
-							<div className="ocr-panel-title">Extracted Text Preview</div>
-							<div className="ocr-preview">
+					<div className="ocr-right">
+						<div className="ocr-panel ocr-right-panel">
+							<div className="ocr-panel-title">Extracted Text (Full)</div>
+							<div className="ocr-preview ocr-preview-full">
 								{ocrText ? (
 									<div style={{ whiteSpace: 'pre-wrap' }}>{ocrText}</div>
 								) : (
@@ -789,75 +850,104 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 								)}
 							</div>
 						</div>
-					</div>
-
-					<div className="ocr-right">
-						<div className="ocr-panel ocr-chat">
-							<div className="ocr-panel-title">{isDemo ? 'Ask the Vault (Login Required)' : 'Ask the Vault'}</div>
-							<div className="ocr-messages">
-								{messages.map((msg, index) => (
-									<div key={index} className={`ocr-msg ${msg.sender === 'user' ? 'user' : 'bot'}`}>
-										<span>{msg.text}</span>
-										{msg.sender === 'bot' && (
-											<button onClick={() => speak(msg.text)} className="ocr-tts" title="Listen">
-												<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-													<path d="M11 5L6 9H3v6h3l5 4z"></path>
-													<path d="M15 9a4 4 0 0 1 0 6"></path>
-													<path d="M17.5 6.5a7 7 0 0 1 0 11"></path>
-												</svg>
-											</button>
-										)}
-									</div>
-								))}
-								<div ref={messagesEndRef} />
-							</div>
-							<div className="ocr-input-row">
-								<textarea
-									className="form-input"
-									placeholder={
-										isDemo
-											? 'Demo mode: OCR extraction only. Log in for AI chat.'
-											: (currentFile ? 'Ask about the selected file...' : 'Select a file to start...')
-									}
-									value={input}
-									onChange={e => setInput(e.target.value)}
-									onKeyPress={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-									rows="3"
-									disabled={!currentFile || isExtracting || isDemo}
-								/>
-								<button
-									onClick={isListening ? stopListening : startListening}
-									className="cyber-btn btn-primary"
-									title={isListening ? 'Stop voice input' : 'Speak your question'}
-									disabled={isThinking || isDemo}
-								>
-									{isListening ? (
-										<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-											<rect x="6" y="6" width="12" height="12" rx="2"></rect>
-										</svg>
-									) : (
-										<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-											<path d="M12 1v22"></path>
-											<path d="M8 5a4 4 0 0 1 8 0v6a4 4 0 0 1-8 0z"></path>
-											<path d="M5 10a7 7 0 0 0 14 0"></path>
-										</svg>
-									)}
-								</button>
-								<button
-									onClick={handleSend}
-									className="cyber-btn btn-secondary"
-									disabled={!currentFile || isExtracting || !input.trim() || isThinking || isDemo}
-									title="Send question"
-								>
-									{isThinking ? 'Thinking...' : 'Send'}
-								</button>
-							</div>
+						<div className="ocr-panel ocr-right-panel">
+							<div className="ocr-panel-title">External Links {ocrLinks.length ? `(${ocrLinks.length})` : ''}</div>
+							{ocrLinks.length ? (
+								<div className="ocr-links-list">
+									{ocrLinks.map((link, idx) => (
+										<a key={`${link}-${idx}`} href={link} target="_blank" rel="noreferrer" className="ocr-link-item">{link}</a>
+									))}
+								</div>
+							) : (
+								<div className="ocr-muted">No external links found in this document.</div>
+							)}
 						</div>
 					</div>
 				</div>
 			</div>
+
+			{isChatOpen && (
+				<div className="ocr-chatbot-overlay">
+					<div className="ocr-chatbot-modal">
+						<div className="ocr-header">
+							<div className="ocr-title">
+								<span className="ocr-icon">AI</span>
+								<div>
+									<div className="ocr-title-text">Neural OCR Chatbot</div>
+									<div className="ocr-subtitle">{isDemo ? 'Demo mode: login required for AI chat' : 'Ask questions about extracted content'}</div>
+								</div>
+							</div>
+							<button className="cyber-btn btn-danger" onClick={() => setIsChatOpen(false)}>Close</button>
+						</div>
+						<div className="ocr-chatbot-body">
+							<div className="ocr-panel ocr-chat">
+								<div className="ocr-panel-title">{isDemo ? 'Ask the Vault (Login Required)' : 'Ask the Vault'}</div>
+								<div className="ocr-messages">
+									{messages.map((msg, index) => (
+										<div key={index} className={`ocr-msg ${msg.sender === 'user' ? 'user' : 'bot'}`}>
+											<span>{msg.text}</span>
+											{msg.sender === 'bot' && (
+												<button onClick={() => speak(msg.text)} className="ocr-tts" title="Listen">
+													<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+														<path d="M11 5L6 9H3v6h3l5 4z"></path>
+														<path d="M15 9a4 4 0 0 1 0 6"></path>
+														<path d="M17.5 6.5a7 7 0 0 1 0 11"></path>
+													</svg>
+												</button>
+											)}
+										</div>
+									))}
+									<div ref={messagesEndRef} />
+								</div>
+								<div className="ocr-input-row">
+									<textarea
+										className="form-input"
+										placeholder={
+											isDemo
+												? 'Demo mode: OCR extraction only. Log in for AI chat.'
+												: (currentFile ? 'Ask about the selected file...' : 'Select a file to start...')
+										}
+										value={input}
+										onChange={e => setInput(e.target.value)}
+										onKeyPress={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+										rows="3"
+										disabled={!currentFile || isExtracting || isDemo}
+									/>
+									<button
+										onClick={isListening ? stopListening : startListening}
+										className="cyber-btn btn-primary"
+										title={isListening ? 'Stop voice input' : 'Speak your question'}
+										disabled={isThinking || isDemo}
+									>
+										{isListening ? (
+											<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+												<rect x="6" y="6" width="12" height="12" rx="2"></rect>
+											</svg>
+										) : (
+											<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+												<path d="M12 1v22"></path>
+												<path d="M8 5a4 4 0 0 1 8 0v6a4 4 0 0 1-8 0z"></path>
+												<path d="M5 10a7 7 0 0 0 14 0"></path>
+											</svg>
+										)}
+									</button>
+									<button
+										onClick={handleSend}
+										className="cyber-btn btn-secondary"
+										disabled={!currentFile || isExtracting || !input.trim() || isThinking || isDemo}
+										title="Send question"
+									>
+										{isThinking ? 'Thinking...' : 'Send'}
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 };
-
 export default Chatbot;
+
+
