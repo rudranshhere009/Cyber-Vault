@@ -93,22 +93,39 @@ function useCursorGlow() {
 }
 
 function showNotification(message, type = 'info') {
+  const normalize = (raw) => {
+    const text = String(raw || '').trim().replace(/^>\s*/, '');
+    if (!text) return 'Notification';
+    return text
+      .replace(/[._]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+  const titleMap = { success: 'Success', error: 'Action Failed', info: 'Notice' };
+  const iconMap = { success: 'OK', error: 'ERR', info: 'INFO' };
+  const title = titleMap[type] || 'Notice';
+  const body = normalize(message);
+
   const notification = document.createElement('div');
   notification.className = `notification ${type}`;
   notification.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;">
-      <span style="font-size:16px;">${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span>
-      <span>${message}</span>
+    <div class="notification-inner">
+      <span class="notification-icon">${iconMap[type] || 'INFO'}</span>
+      <div class="notification-copy">
+        <div class="notification-title">${title}</div>
+        <div class="notification-text">${body}</div>
+      </div>
     </div>
   `;
   document.body.appendChild(notification);
-  setTimeout(() => notification.classList.add('show'), 100);
+  setTimeout(() => notification.classList.add('show'), 90);
   setTimeout(() => {
     notification.classList.remove('show');
     setTimeout(() => {
       if (document.body.contains(notification)) document.body.removeChild(notification);
-    }, 400);
-  }, 4000);
+    }, 280);
+  }, 3200);
 }
 
 function useEasterEgg() {
@@ -4372,3 +4389,4 @@ function App() {
 }
 
 export default App;
+
