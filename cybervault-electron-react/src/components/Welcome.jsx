@@ -302,7 +302,7 @@ function Welcome({ onContinue }) {
               <span className="btn-word">Your</span>
               <span className="btn-word">Vault</span>
             </span>
-            <span className="btn-dot" aria-hidden="true">{'\u25CF'}</span>
+            <span className="btn-dot" aria-hidden="true">{'\u{1F4E6}'}</span>
           </button>
         </div>
 

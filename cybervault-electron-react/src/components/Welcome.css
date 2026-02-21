@@ -3173,3 +3173,40 @@ body.theme-night .security-card,
 body.theme-night .pamphlet-inner {
   animation-name: none !important;
 }
+
+/* Welcome parity tweaks: login/signup glide + CTA box emoji */
+.welcome-header {
+  position: relative;
+}
+
+.welcome-header::before {
+  content: '';
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(121, 163, 217, 0.95), transparent);
+  animation: welcomeHeaderGlide 2s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes welcomeHeaderGlide {
+  0% { transform: translateX(-50%) scaleX(0); opacity: 0.45; }
+  50% { opacity: 1; }
+  100% { transform: translateX(-50%) scaleX(1); opacity: 0.45; }
+}
+
+.btn-dot {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif;
+  font-size: 20px;
+  line-height: 1;
+  text-shadow: none;
+  filter: none;
+}
+
+body.theme-night .btn-dot {
+  text-shadow: none;
+  filter: none;
+}
