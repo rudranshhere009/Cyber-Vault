@@ -1783,3 +1783,102 @@ body.theme-night .file-context-menu button:hover { background: rgba(51, 65, 85, 
     opacity: 0;
   }
 }
+
+/* Final mobile lock for auth pages (applies after all overrides) */
+@media (max-width: 640px) {
+  .login-page {
+    align-items: flex-start !important;
+    padding: 12px 0 18px !important;
+  }
+
+  .login-page .auth-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 10px !important;
+  }
+
+  .login-page .auth-form-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 16px 12px !important;
+    border-radius: 14px !important;
+  }
+
+  .login-page .neural-title {
+    font-size: 24px !important;
+    line-height: 1.05 !important;
+  }
+
+  .login-page .neural-subtitle {
+    font-size: 11px !important;
+  }
+
+  .login-page .mode-toggle {
+    margin-bottom: 16px !important;
+  }
+
+  .login-page .mode-toggle button {
+    padding: 10px 8px !important;
+    font-size: 12px !important;
+  }
+
+  .login-page .form-group {
+    margin-bottom: 14px !important;
+  }
+
+  .login-page .form-label {
+    font-size: 10px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .login-page .form-input {
+    padding: 12px 12px !important;
+    font-size: 13px !important;
+    border-radius: 10px !important;
+  }
+
+  .login-page .submit-btn,
+  .login-page .cyber-btn {
+    min-height: 42px !important;
+    font-size: 12px !important;
+    letter-spacing: 0.4px !important;
+  }
+
+  .login-page .security-info {
+    margin-top: 16px !important;
+    padding: 12px !important;
+    border-radius: 10px !important;
+  }
+
+  .login-page .security-title {
+    font-size: 12px !important;
+  }
+
+  .login-page .security-features {
+    font-size: 10px !important;
+    line-height: 1.45 !important;
+  }
+
+  .login-page .back-to-welcome-btn {
+    top: max(8px, env(safe-area-inset-top)) !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
+    padding: 7px !important;
+    gap: 0 !important;
+    font-size: 0 !important;
+    border-radius: 999px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    justify-content: center !important;
+  }
+
+  .login-page .back-to-welcome-btn .back-icon {
+    width: 19px !important;
+    height: 19px !important;
+    font-size: 12px !important;
+    margin: 0 !important;
+  }
+
+  .login-page .back-to-welcome-btn span:not(.back-icon) {
+    display: none !important;
+  }
+}
