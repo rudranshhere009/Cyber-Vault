@@ -413,6 +413,26 @@ body.theme-night .ocr-modal.mission { background: linear-gradient(180deg, rgba(6
 .confirm-title { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-primary); }
 .confirm-message { font-size: 13px; font-weight: 600; color: var(--text-secondary); line-height: 1.5; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.password-modal-overlay { background: rgba(0, 0, 0, 0.74); z-index: 10030; }
+.password-modal-panel {
+  width: min(420px, 92vw);
+  background: linear-gradient(145deg, rgba(20, 10, 7, 0.98), rgba(10, 8, 11, 0.98));
+  border: 1px solid rgba(255, 138, 52, 0.55);
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.62), 0 0 24px rgba(255, 138, 52, 0.2);
+}
+.password-modal-panel .confirm-title { color: #ffb27a; }
+.password-modal-panel .confirm-message { color: #dfc4aa; }
+.password-modal-panel .password-input {
+  background: rgba(26, 18, 16, 0.96);
+  border-color: rgba(255, 138, 52, 0.45);
+  color: #ffe6ce;
+}
+.password-modal-panel .password-input::placeholder { color: rgba(255, 210, 173, 0.62); }
+.password-modal-panel .password-input:focus {
+  border-color: rgba(255, 138, 52, 0.85);
+  box-shadow: 0 0 0 1px rgba(255, 138, 52, 0.2), 0 0 18px rgba(255, 138, 52, 0.35);
+  background: rgba(30, 20, 16, 0.98);
+}
 .export-panel { width: min(460px, 92vw); }
 .export-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 10px 0 6px; }
 .export-option { padding: 10px 8px; border-radius: 12px; border: 1px solid rgba(159, 179, 223, 0.35); background: rgba(255, 255, 255, 0.9); font-weight: 800; font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; cursor: pointer; display: grid; gap: 6px; justify-items: center; }

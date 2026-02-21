@@ -8,6 +8,12 @@ function IrisModal({ mode, open, onClose, onRegistered, onAuthenticated }) {
   const [detector] = useState(new IrisDetector());
   const [samples, setSamples] = useState([]);
   const samplesRef = useRef([]);
+  const isMobileCapture = () => {
+    try {
+      if (window.matchMedia?.('(max-width: 900px)').matches) return true;
+    } catch {}
+    return /Android|webOS|iPhone|iPad|iPod|Opera Mini|IEMobile|Mobile/i.test(navigator.userAgent || '');
+  };
 
   useEffect(() => {
     let stream;
@@ -57,24 +63,29 @@ function IrisModal({ mode, open, onClose, onRegistered, onAuthenticated }) {
               if (irisData) {
                 const mean = irisData.reduce((sum, v) => sum + v, 0) / irisData.length;
                 const variance = irisData.reduce((sum, v) => sum + (v - mean) * (v - mean), 0) / irisData.length;
-                if (mean < 60) {
+                const minBrightness = isMobileCapture() ? 45 : 60;
+                const maxBrightness = isMobileCapture() ? 215 : 200;
+                const minVariance = isMobileCapture() ? 130 : 200;
+                const neededSamples = isMobileCapture() ? 4 : 3;
+
+                if (mean < minBrightness) {
                   setMessage('Too dark. Increase lighting and keep eye centered.');
                   return;
                 }
-                if (mean > 200) {
+                if (mean > maxBrightness) {
                   setMessage('Too bright. Reduce glare and avoid direct light.');
                   return;
                 }
-                if (variance < 200) {
+                if (variance < minVariance) {
                   setMessage('Eye not focused. Hold still and avoid blinking.');
                   return;
                 }
 
                 samplesRef.current = [...samplesRef.current, irisData];
                 setSamples(samplesRef.current);
-                setMessage(`Iris sample ${samplesRef.current.length}/3 captured`);
+                setMessage(`Iris sample ${samplesRef.current.length}/${neededSamples} captured`);
 
-                if (samplesRef.current.length >= 3) {
+                if (samplesRef.current.length >= neededSamples) {
                   clearInterval(detectionInterval);
 
                   if (mode === 'register') {
@@ -168,7 +179,7 @@ function IrisModal({ mode, open, onClose, onRegistered, onAuthenticated }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
           <button className="cyber-btn btn-secondary" onClick={onClose}>Cancel</button>
           <div style={{ color: 'var(--primary-cyan)', fontSize: '12px' }}>
-            Samples: {samples.length}/3
+            Samples: {samples.length}/{isMobileCapture() ? 4 : 3}
           </div>
         </div>
       </div>

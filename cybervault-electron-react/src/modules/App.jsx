@@ -28,6 +28,8 @@ async function loadIrisDetector() {
   return irisDetectorPromise;
 }
 
+const DEMO_MASTER_PASSWORD = 'demo-mode-master-key';
+
 function useMatrixEffect() {
   useEffect(() => {
     const canvas = document.createElement('canvas');
@@ -268,6 +270,16 @@ const toB64 = (u8) => {
   return btoa(result);
 };
 const fromB64 = (b64) => new Uint8Array(atob(b64).split('').map(c => c.charCodeAt(0)));
+const isMobileBiometricContext = () => {
+  try {
+    if (typeof window !== 'undefined' && window.matchMedia?.('(max-width: 900px)').matches) return true;
+  } catch {}
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  return /Android|webOS|iPhone|iPad|iPod|Opera Mini|IEMobile|Mobile/i.test(ua);
+};
+const getFaceMatchThreshold = () => (isMobileBiometricContext() ? 0.43 : 0.35);
+const getIrisMatchThreshold = () => (isMobileBiometricContext() ? 0.55 : 0.6);
+const getFaceSampleCount = () => (isMobileBiometricContext() ? 4 : 3);
 
 const DB_NAME = 'cybervaultDB';
 const DB_VERSION = 2;
@@ -396,7 +408,10 @@ function FaceModal({ mode, open, onClose, onRegistered, onAuthenticated }) {
             detectionInterval = setInterval(async () => {
               if (!open || !videoRef.current) return;
 
-              const options = new window.faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.6, inputSize: 224 });
+              const options = new window.faceapi.TinyFaceDetectorOptions({
+                scoreThreshold: isMobileBiometricContext() ? 0.52 : 0.6,
+                inputSize: isMobileBiometricContext() ? 192 : 224
+              });
               const res = await window.faceapi
                 .detectSingleFace(videoRef.current, options)
                 .withFaceLandmarks()
@@ -409,11 +424,13 @@ function FaceModal({ mode, open, onClose, onRegistered, onAuthenticated }) {
                 const faceCenterY = box.y + box.height / 2;
                 const faceArea = box.width * box.height;
 
+                const vw = videoRef.current?.videoWidth || 640;
+                const vh = videoRef.current?.videoHeight || 480;
                 const frame = {
-                  x: 140,
-                  y: 40,
-                  width: 200,
-                  height: 280,
+                  x: vw * 0.28,
+                  y: vh * 0.1,
+                  width: vw * 0.44,
+                  height: vh * 0.78,
                 };
 
                 if (
@@ -424,11 +441,13 @@ function FaceModal({ mode, open, onClose, onRegistered, onAuthenticated }) {
                 ) {
                   const frameArea = frame.width * frame.height;
                   const ratio = faceArea / frameArea;
-                  if (ratio < 0.35) {
+                  const minRatio = isMobileBiometricContext() ? 0.26 : 0.35;
+                  const maxRatio = isMobileBiometricContext() ? 1.0 : 0.9;
+                  if (ratio < minRatio) {
                     setMessage('Move closer to the camera');
                     return;
                   }
-                  if (ratio > 0.9) {
+                  if (ratio > maxRatio) {
                     setMessage('Move slightly back');
                     return;
                   }
@@ -438,7 +457,7 @@ function FaceModal({ mode, open, onClose, onRegistered, onAuthenticated }) {
                   setMessage('Center your face inside the frame');
                 }
 
-                if (samples.length >= 3) {
+                if (samples.length >= getFaceSampleCount()) {
                   clearInterval(detectionInterval);
                   const len = samples[0].length;
                   const avg = new Array(len).fill(0);
@@ -513,12 +532,12 @@ function FaceModal({ mode, open, onClose, onRegistered, onAuthenticated }) {
 function PasswordModal({ open, onClose, onConfirm, value, onChange }) {
   if (!open) return null;
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: '#ffffff', color: '#111827', border: '1px solid #e5e7eb', borderRadius: 16, padding: 20, width: 360, boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}>
-        <div className="neural-title" style={{ fontSize: 20, marginBottom: 10, WebkitTextFillColor: 'initial', background: 'none' }}>Enter Master Password</div>
-        <div className="password-status" style={{ marginBottom: 8, color: '#374151' }}>Required to encrypt/decrypt files</div>
-        <input type="password" className="password-input" placeholder="Enter quantum passphrase..." value={value} onChange={onChange} style={{ background: '#f9fafb', color: '#111827' }} />
-        <div style={{ display: 'flex', gap: 10, marginTop: 12, justifyContent: 'flex-end' }}>
+    <div className="confirm-overlay password-modal-overlay">
+      <div className="confirm-panel password-modal-panel">
+        <div className="confirm-title">Enter Master Password</div>
+        <div className="confirm-message">Required to encrypt/decrypt files</div>
+        <input type="password" className="password-input" placeholder="Enter quantum passphrase..." value={value} onChange={onChange} />
+        <div className="confirm-actions">
           <button className="cyber-btn btn-secondary" onClick={onClose}>Cancel</button>
           <button className="cyber-btn btn-primary" onClick={onConfirm}>Confirm</button>
         </div>
@@ -703,8 +722,10 @@ function App() {
         username: 'Demo User',
         loginTime: new Date().toISOString(),
         demo: true,
+        masterPassword: DEMO_MASTER_PASSWORD,
       };
       saveSession(demoSession);
+      setMasterPassword(DEMO_MASTER_PASSWORD);
       setProfile(buildDefaultProfile({
         displayName: 'Demo User',
         title: 'Demo Session',
@@ -1144,6 +1165,14 @@ function App() {
   }, [autoLockEnabled, autoLockMinutes, session?.demo]);
 
   const isDemoSession = !!session?.demo;
+  useEffect(() => {
+    if (session?.demo) {
+      setAnomalyUnlocked(true);
+      setAnomalyPin('');
+      return;
+    }
+    setAnomalyUnlocked(false);
+  }, [session?.demo]);
   const profileDisplayName = isDemoSession ? 'Demo User' : (profile.displayName || session?.username || 'User');
   const headerIdentity = isDemoSession
     ? 'Hi, Demo User'
@@ -1305,6 +1334,12 @@ function App() {
   const pwdResolveRef = useRef(null);
 
   async function ensureMasterPassword() {
+    if (session?.demo) {
+      const demoPwd = session?.masterPassword || DEMO_MASTER_PASSWORD;
+      if (!session?.masterPassword) saveSession({ ...(session || {}), masterPassword: demoPwd });
+      setMasterPassword(demoPwd);
+      return demoPwd;
+    }
     if (masterPassword && masterPassword.length >= 8) return masterPassword;
     if (session?.masterPassword && session.masterPassword.length >= 8) {
       setMasterPassword(session.masterPassword);
@@ -1668,7 +1703,7 @@ function App() {
 
   async function compareIrisTemplates(template1, template2) {
     const irisDetector = await loadIrisDetector();
-    return irisDetector.compareIrisTemplates(template1, template2, 0.6);
+    return irisDetector.compareIrisTemplates(template1, template2, getIrisMatchThreshold());
   }
 
   function euclidean(a, b) {
@@ -1710,7 +1745,7 @@ function App() {
       if (!stored.email || !stored.faceDescriptor) { showNotification('> face.login.not.registered', 'error'); return; }
       const liveDesc = await startFaceLogin();
       const dist = euclidean(liveDesc, stored.faceDescriptor);
-      if (dist <= 0.35) {
+      if (dist <= getFaceMatchThreshold()) {
         showNotification('> neural.face.link.established', 'success');
         const s = { email: stored.email, username: stored.username, loginTime: new Date().toISOString() };
         saveSession(s);
@@ -2530,7 +2565,7 @@ function App() {
       if (!stored.email || !stored.faceDescriptor) { showNotification('> face.login.not.registered', 'error'); return; }
       const liveDesc = await startFaceLogin();
       const dist = euclidean(liveDesc, stored.faceDescriptor);
-      if (dist <= 0.35) {
+      if (dist <= getFaceMatchThreshold()) {
         setLocked(false);
         showNotification('> neural.vault.unlocked.via.face', 'success');
       } else {
@@ -2988,6 +3023,11 @@ function App() {
   }
 
   function unlockAnomalyDetails() {
+    if (session?.demo) {
+      setAnomalyUnlocked(true);
+      showNotification('> demo.anomaly.panel.unlocked', 'info');
+      return;
+    }
     if (!session?.email) return;
     let storedUser = {};
     try { storedUser = JSON.parse(localStorage.getItem('neuralUser_' + session.email) || '{}'); } catch {}
@@ -3039,10 +3079,12 @@ function App() {
 
   async function handleViewFile() {
     if (!viewingFile) return;
-    const storedUser = JSON.parse(localStorage.getItem('neuralUser_' + session.email) || '{}');
-    if (storedUser.neuralPin !== viewingFilePin) {
-      showNotification('> invalid.neural.pin', 'error');
-      return;
+    if (!session?.demo) {
+      const storedUser = JSON.parse(localStorage.getItem('neuralUser_' + session.email) || '{}');
+      if (storedUser.neuralPin !== viewingFilePin) {
+        showNotification('> invalid.neural.pin', 'error');
+        return;
+      }
     }
 
     try {
@@ -3580,8 +3622,12 @@ function App() {
                   </div>
                   <div className="drawer-card anomaly-details">
                     <div className="drawer-label">Anomaly Details</div>
-                    <div className="drawer-help">Unlock with your neural pin to review anomaly events from the last 24 hours.</div>
-                    {!anomalyUnlocked ? (
+                    <div className="drawer-help">
+                      {session?.demo
+                        ? 'Demo mode keeps anomaly insights open for quick exploration.'
+                        : 'Unlock with your neural pin to review anomaly events from the last 24 hours.'}
+                    </div>
+                    {!anomalyUnlocked && !session?.demo ? (
                       <div className="anomaly-gate">
                         <input
                           type="password"
@@ -4165,18 +4211,29 @@ function App() {
             </div>
             {!viewingFileContent ? (
               <div className="file-view-body compact">
-                <label className="form-label">Neural PIN</label>
-                <div className="file-view-input-row compact">
-                  <input
-                    type="password"
-                    className="form-input"
-                    maxLength="3"
-                    value={viewingFilePin}
-                    onChange={e => setViewingFilePin(e.target.value)}
-                    placeholder="•••"
-                  />
-                  <button className="cyber-btn btn-primary file-view-btn" onClick={handleViewFile}>Unlock</button>
-                </div>
+                {!session?.demo ? (
+                  <>
+                    <label className="form-label">Neural PIN</label>
+                    <div className="file-view-input-row compact">
+                      <input
+                        type="password"
+                        className="form-input"
+                        maxLength="3"
+                        value={viewingFilePin}
+                        onChange={e => setViewingFilePin(e.target.value)}
+                        placeholder="Enter 3-digit pin"
+                      />
+                      <button className="cyber-btn btn-primary file-view-btn" onClick={handleViewFile}>Unlock</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <label className="form-label">Demo Preview Access</label>
+                    <div className="file-view-input-row compact">
+                      <button className="cyber-btn btn-primary file-view-btn" onClick={handleViewFile}>Open Preview</button>
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               renderFileContent()
