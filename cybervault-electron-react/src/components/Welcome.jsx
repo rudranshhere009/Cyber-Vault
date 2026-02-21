@@ -188,6 +188,7 @@ function Welcome({ onContinue }) {
         <div className="ribbon-layer"></div>
         <div className="pulse-ring-layer"></div>
         <div className="scan-beam-layer"></div>
+        <div className="glide-wave-layer"></div>
         <div className="starfield-layer"></div>
         <div className="film-grain-layer"></div>
         <div className="gradient-overlay"></div>

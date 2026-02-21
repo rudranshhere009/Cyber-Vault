@@ -3210,3 +3210,83 @@ body.theme-night .btn-dot {
   text-shadow: none;
   filter: none;
 }
+
+/* Slow glide wave through screen + title text */
+.glide-wave-layer {
+  position: absolute;
+  inset: -14%;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.28;
+  background:
+    linear-gradient(115deg, transparent 34%, rgba(170, 214, 255, 0.2) 50%, transparent 66%),
+    linear-gradient(295deg, transparent 36%, rgba(121, 163, 217, 0.14) 52%, transparent 68%);
+  filter: blur(16px);
+  mix-blend-mode: screen;
+  animation: welcomeWaveSlide 9.5s ease-in-out infinite;
+}
+
+@keyframes welcomeWaveSlide {
+  0% { transform: translate3d(-26%, 0, 0) skewX(-8deg); }
+  50% { transform: translate3d(12%, -1.5%, 0) skewX(-6deg); }
+  100% { transform: translate3d(28%, 0, 0) skewX(-8deg); }
+}
+
+.welcome-title .title-word {
+  background: linear-gradient(
+    100deg,
+    #2f4864 0%,
+    #2f4864 36%,
+    #79a3d9 50%,
+    #2f4864 64%,
+    #2f4864 100%
+  );
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: titleWordWaveSlide 7.2s ease-in-out infinite;
+}
+
+.welcome-title .title-word:last-child {
+  animation-delay: 0.5s;
+}
+
+@keyframes titleWordWaveSlide {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+body.theme-night .glide-wave-layer {
+  opacity: 0.34;
+  background:
+    linear-gradient(115deg, transparent 34%, rgba(125, 211, 252, 0.26) 50%, transparent 66%),
+    linear-gradient(295deg, transparent 36%, rgba(99, 102, 241, 0.18) 52%, transparent 68%);
+}
+
+body.theme-night .welcome-title .title-word {
+  background: linear-gradient(
+    100deg,
+    #edf5ff 0%,
+    #edf5ff 35%,
+    #7dd3fc 50%,
+    #edf5ff 65%,
+    #edf5ff 100%
+  );
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: titleWordWaveSlide 7.2s ease-in-out infinite !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glide-wave-layer,
+  .welcome-title .title-word,
+  body.theme-night .welcome-title .title-word {
+    animation: none !important;
+  }
+}
