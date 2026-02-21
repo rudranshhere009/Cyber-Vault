@@ -201,12 +201,12 @@ function PasswordStrength({ value }) {
     if (/[0-9]/.test(value)) score += 1;
     if (/[^a-zA-Z0-9]/.test(value)) score += 1;
     const map = {
-      0: ['neural.security.level: critical.vulnerability', 'linear-gradient(90deg,#ff3366,#cc1144)'],
-      1: ['neural.security.level: critical.vulnerability', 'linear-gradient(90deg,#ff3366,#cc1144)'],
-      2: ['neural.security.level: insufficient.protection', 'linear-gradient(90deg,#ffaa00,#ff8800)'],
-      3: ['neural.security.level: moderate.encryption', 'linear-gradient(90deg,#ffaa00,#00ff88)'],
-      4: ['neural.security.level: strong.quantum.resistance', 'linear-gradient(90deg,#00ff88,#00d4ff)'],
-      5: ['neural.security.level: maximum.protection', 'linear-gradient(90deg,#00d4ff,#6366f1)'],
+      0: ['neural.security.level: critical.vulnerability', 'linear-gradient(90deg,#ff4d4f,#cc2f2f)'],
+      1: ['neural.security.level: critical.vulnerability', 'linear-gradient(90deg,#ff4d4f,#cc2f2f)'],
+      2: ['neural.security.level: insufficient.protection', 'linear-gradient(90deg,#ff9f43,#ff7a17)'],
+      3: ['neural.security.level: moderate.encryption', 'linear-gradient(90deg,#ffb26f,#ff8f2d)'],
+      4: ['neural.security.level: strong.quantum.resistance', 'linear-gradient(90deg,#ffc180,#ff9b4f)'],
+      5: ['neural.security.level: maximum.protection', 'linear-gradient(90deg,#ffd0a2,#ffb26f)'],
     };
     const [text, gradient] = map[score];
     return { width: (score / 5) * 100, text, gradient };
@@ -2908,8 +2908,8 @@ function App() {
             className="back-to-welcome-btn"
             onClick={() => setPage('welcome')}
           >
-            <span className="back-icon" aria-hidden="true">{'\u25CF'}</span>
-            <span>Back to Welcome</span>
+            <span className="back-icon" aria-hidden="true">{'\u2302'}</span>
+            <span>You wanna go back?</span>
           </button>
 
           <div className="auth-container">
@@ -2968,7 +2968,7 @@ function App() {
                   </div>
                   <div className="form-group">
                     <label className="form-label">🔒 Confirm Password</label>
-                    <input type="password" className="form-input" id="confirmPassword" placeholder="Confirm quantum passphrase..." required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={confirmPassword ? (confirmPassword !== signupPassword ? { borderColor: '#ff3366', boxShadow: '0 0 10px rgba(255, 51, 102, 0.3)' } : { borderColor: 'var(--primary-green)', boxShadow: '0 0 10px rgba(0, 255, 136, 0.3)' }) : {}} />
+                    <input type="password" className="form-input" id="confirmPassword" placeholder="Confirm quantum passphrase..." required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={confirmPassword ? (confirmPassword !== signupPassword ? { borderColor: '#ff4d4f', boxShadow: '0 0 10px rgba(255, 77, 79, 0.3)' } : { borderColor: '#ff9f43', boxShadow: '0 0 10px rgba(255, 159, 67, 0.35)' }) : {}} />
                   </div>
                   <div className="form-group">
                     <label className="form-label">🔢 Neural PIN</label>
@@ -2988,7 +2988,7 @@ function App() {
                         setSignupNeuralPin(v);
                       }}
                     />
-                    <div className="password-status" style={/^\d{3}$/.test(signupNeuralPin) ? {color: 'var(--primary-green)'} : {color: '#ff3366'}}>
+                    <div className="password-status" style={/^\d{3}$/.test(signupNeuralPin) ? {color: '#ffb26f'} : {color: '#ff4d4f'}}>
                       PIN Status: {/^\d{3}$/.test(signupNeuralPin) ? 'Valid' : 'Must be exactly 3 digits (0-9)'}
                     </div>
                   </div>
