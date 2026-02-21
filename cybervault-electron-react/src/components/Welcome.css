@@ -3335,3 +3335,69 @@ body.theme-night .welcome-glide-overlay {
     linear-gradient(110deg, transparent 30%, rgba(125, 211, 252, 0.35) 48%, rgba(125, 211, 252, 0.14) 54%, transparent 72%),
     linear-gradient(290deg, transparent 34%, rgba(99, 102, 241, 0.24) 50%, transparent 66%);
 }
+
+/* Performance cleanup: disable old heavy effects, keep one fast global glide */
+.particles,
+.mouse-glow,
+.ambient-light,
+.nebula-layer,
+.streak-layer,
+.dust-layer,
+.ribbon-layer,
+.pulse-ring-layer,
+.scan-beam-layer,
+.starfield-layer,
+.film-grain-layer,
+.glide-wave-layer {
+  display: none !important;
+}
+
+.welcome-container,
+.welcome-container::before,
+.welcome-container::after,
+.welcome-bg::before,
+.blob,
+.grid-bg,
+.gradient-overlay,
+.welcome-header::before {
+  animation: none !important;
+}
+
+.welcome-title .title-word,
+body.theme-night .welcome-title .title-word {
+  animation: none !important;
+  background: none !important;
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+.welcome-glide-overlay {
+  position: absolute;
+  inset: -8%;
+  z-index: 11;
+  pointer-events: none;
+  opacity: 0.42;
+  background: linear-gradient(
+    108deg,
+    transparent 30%,
+    rgba(170, 214, 255, 0.24) 46%,
+    rgba(170, 214, 255, 0.08) 52%,
+    transparent 68%
+  );
+  mix-blend-mode: normal;
+  filter: none;
+  will-change: transform, opacity;
+  transform: translate3d(-58%, 0, 0) skewX(-8deg);
+  animation: welcomeGlobalGlide 6.2s ease-in-out infinite !important;
+}
+
+body.theme-night .welcome-glide-overlay {
+  opacity: 0.5;
+  background: linear-gradient(
+    108deg,
+    transparent 28%,
+    rgba(125, 211, 252, 0.34) 46%,
+    rgba(125, 211, 252, 0.13) 52%,
+    transparent 70%
+  );
+}

@@ -3,24 +3,12 @@ import './Welcome.css';
 
 function Welcome({ onContinue }) {
   const containerRef = useRef(null);
-  const mouseGlowRef = useRef(null);
-  const rafRef = useRef(0);
   const [installModalOpen, setInstallModalOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [canInstall, setCanInstall] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [installMessage, setInstallMessage] = useState('');
   const releasesUrl = 'https://github.com/rudranshhere009/Cyber-Vault/releases/latest';
-  const prefersReducedMotion = useMemo(
-    () => window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false,
-    []
-  );
-  const isTouchDevice = useMemo(
-    () => window.matchMedia?.('(pointer: coarse)')?.matches ?? false,
-    []
-  );
-  const lowPowerDevice = useMemo(() => (window.navigator.hardwareConcurrency || 8) <= 4, []);
-  const liteEffects = prefersReducedMotion || isTouchDevice || lowPowerDevice;
 
   const isIOS = useMemo(() => {
     const ua = window.navigator.userAgent.toLowerCase();
@@ -34,51 +22,6 @@ function Welcome({ onContinue }) {
     if (ua.includes('linux')) return 'linux';
     return 'other';
   }, []);
-
-  const particleSlots = useMemo(() => Array.from({ length: 8 }, (_, i) => i), []);
-
-  useEffect(() => {
-    if (liteEffects) return undefined;
-
-    const handleMouseMove = (e) => {
-      if (!mouseGlowRef.current) return;
-      const x = e.clientX - 50;
-      const y = e.clientY - 50;
-      if (rafRef.current) return;
-      rafRef.current = requestAnimationFrame(() => {
-        mouseGlowRef.current.style.transform = `translate3d(${x}px, ${y}px, 0)`;
-        rafRef.current = 0;
-      });
-    };
-    window.addEventListener('mousemove', handleMouseMove, { passive: true });
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = 0;
-      }
-    };
-  }, [liteEffects]);
-
-  useEffect(() => {
-    if (liteEffects) return undefined;
-
-    let scrollRaf = 0;
-    const handleScroll = () => {
-      if (!containerRef.current) return;
-      if (scrollRaf) return;
-      scrollRaf = requestAnimationFrame(() => {
-        const offset = window.scrollY * 0.3;
-        containerRef.current.style.setProperty('--header-offset', `${offset}px`);
-        scrollRaf = 0;
-      });
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (scrollRaf) cancelAnimationFrame(scrollRaf);
-    };
-  }, [liteEffects]);
 
   useEffect(() => {
     const standalone = window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator.standalone;
@@ -194,14 +137,6 @@ function Welcome({ onContinue }) {
         <div className="gradient-overlay"></div>
       </div>
 
-      {!liteEffects && (
-        <div className="particles">
-          {particleSlots.map((i) => (
-            <div key={i} className="particle"></div>
-          ))}
-        </div>
-      )}
-
       <div className="grid-bg"></div>
       <div className="welcome-glide-overlay" aria-hidden="true"></div>
 
@@ -313,10 +248,6 @@ function Welcome({ onContinue }) {
           <div className="accent-line"></div>
         </div>
       </div>
-
-      {!liteEffects && <div className="mouse-glow" ref={mouseGlowRef}></div>}
-      {!liteEffects && <div className="ambient-light ambient-1"></div>}
-      {!liteEffects && <div className="ambient-light ambient-2"></div>}
 
       {installModalOpen && (
         <div className="install-overlay">
