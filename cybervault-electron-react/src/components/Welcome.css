@@ -2010,7 +2010,7 @@
   box-shadow: 0 10px 24px rgba(93, 143, 199, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.85);
   animation: fadeInDelay 1s ease-out 1s forwards;
   opacity: 0;
-  font-family: 'Oxanium', 'Exo 2', 'JetBrains Mono', monospace;
+  font-family: 'Oxanium', 'JetBrains Mono', monospace;
   outline: none;
   display: inline-flex;
   align-items: center;
@@ -2257,7 +2257,7 @@
   display: grid;
   place-items: center;
   font-size: 20px;
-  font-family: 'Oxanium', 'Exo 2', 'JetBrains Mono', sans-serif;
+  font-family: 'Oxanium', 'JetBrains Mono', sans-serif;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -3400,4 +3400,15 @@ body.theme-night .welcome-glide-overlay {
     rgba(125, 211, 252, 0.13) 52%,
     transparent 70%
   );
+}
+
+/* Strict legacy cleanup for Welcome: keep only the current global glide animation */
+.welcome-container *,
+.welcome-container::before,
+.welcome-container::after {
+  animation: none !important;
+}
+
+.welcome-glide-overlay {
+  animation: welcomeGlobalGlide 6.2s ease-in-out infinite !important;
 }
