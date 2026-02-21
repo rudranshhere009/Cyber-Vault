@@ -3284,9 +3284,54 @@ body.theme-night .welcome-title .title-word {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .welcome-glide-overlay,
   .glide-wave-layer,
   .welcome-title .title-word,
   body.theme-night .welcome-title .title-word {
     animation: none !important;
   }
+}
+
+/* Strong global glide across full welcome page */
+.welcome-glide-overlay {
+  position: absolute;
+  inset: -18%;
+  z-index: 11;
+  pointer-events: none;
+  opacity: 0.34;
+  background:
+    linear-gradient(110deg, transparent 32%, rgba(180, 220, 255, 0.24) 48%, rgba(180, 220, 255, 0.08) 54%, transparent 70%),
+    linear-gradient(290deg, transparent 34%, rgba(121, 163, 217, 0.18) 50%, transparent 66%);
+  mix-blend-mode: screen;
+  filter: blur(4px);
+  transform: translate3d(-62%, 0, 0) skewX(-10deg);
+  animation: welcomeGlobalGlide 10.5s ease-in-out infinite;
+}
+
+@keyframes welcomeGlobalGlide {
+  0% {
+    transform: translate3d(-62%, 0, 0) skewX(-10deg);
+    opacity: 0.12;
+  }
+  20% {
+    opacity: 0.34;
+  }
+  50% {
+    transform: translate3d(0, -1.2%, 0) skewX(-7deg);
+    opacity: 0.4;
+  }
+  80% {
+    opacity: 0.34;
+  }
+  100% {
+    transform: translate3d(62%, 0, 0) skewX(-10deg);
+    opacity: 0.12;
+  }
+}
+
+body.theme-night .welcome-glide-overlay {
+  opacity: 0.48;
+  background:
+    linear-gradient(110deg, transparent 30%, rgba(125, 211, 252, 0.35) 48%, rgba(125, 211, 252, 0.14) 54%, transparent 72%),
+    linear-gradient(290deg, transparent 34%, rgba(99, 102, 241, 0.24) 50%, transparent 66%);
 }

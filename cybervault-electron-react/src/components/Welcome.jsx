@@ -203,6 +203,7 @@ function Welcome({ onContinue }) {
       )}
 
       <div className="grid-bg"></div>
+      <div className="welcome-glide-overlay" aria-hidden="true"></div>
 
       <button className="install-fab" onClick={openInstallModal} title={isInstalled ? 'App installed' : 'Download app'}>
         {'\u2726'}
