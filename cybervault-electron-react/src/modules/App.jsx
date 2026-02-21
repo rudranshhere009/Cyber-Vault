@@ -644,6 +644,7 @@ function App() {
   });
   const [profileNotice, setProfileNotice] = useState('');
   const [demoAccessNotice, setDemoAccessNotice] = useState({ open: false, feature: '' });
+  const [demoSplashOpen, setDemoSplashOpen] = useState(false);
 
   const [page, setPage] = useState('welcome');
   const handleGoToLogin = useCallback(() => {
@@ -693,24 +694,30 @@ function App() {
   }, []);
 
   const startDemoMode = useCallback(async () => {
-    await clearDemoSessionArtifacts('demo@cybervault.local', []);
-    const demoSession = {
-      email: 'demo@cybervault.local',
-      username: 'Demo User',
-      loginTime: new Date().toISOString(),
-      demo: true,
-    };
-    saveSession(demoSession);
-    setProfile(buildDefaultProfile({
-      displayName: 'Demo User',
-      title: 'Demo Session',
-      email: 'demo@cybervault.local',
-      accent: '#ff9a4a',
-      plan: 'Guest',
-    }));
-    setMode('login');
-    setPage('vault');
-    showNotification('> demo.mode.active.one.file.limit.enabled', 'info');
+    setDemoSplashOpen(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await clearDemoSessionArtifacts('demo@cybervault.local', []);
+      const demoSession = {
+        email: 'demo@cybervault.local',
+        username: 'Demo User',
+        loginTime: new Date().toISOString(),
+        demo: true,
+      };
+      saveSession(demoSession);
+      setProfile(buildDefaultProfile({
+        displayName: 'Demo User',
+        title: 'Demo Session',
+        email: 'demo@cybervault.local',
+        accent: '#ff9a4a',
+        plan: 'Guest',
+      }));
+      setMode('login');
+      setPage('vault');
+      showNotification('> demo.mode.active.one.file.limit.enabled', 'info');
+    } finally {
+      setDemoSplashOpen(false);
+    }
   }, [saveSession, clearDemoSessionArtifacts]);
   const [missionOpen, setMissionOpen] = useState(false);
   const [mode, setMode] = useState('login');
@@ -961,6 +968,73 @@ function App() {
     return Array.from(new Set([`cyberVaultFiles_${raw}`, `cyberVaultFiles_${normalized}`, 'cyberVaultFiles']));
   };
   const vaultIndexKey = (email) => normalizeEmail(email) || 'anon';
+  const DEMO_CLEANUP_KEY = 'cyberVaultDemoCleanup';
+
+  const clearDemoArtifactsStorageOnly = useCallback(async (email, dataIds = []) => {
+    const normalizedEmail = normalizeEmail(email) || 'demo@cybervault.local';
+    for (const dataId of dataIds) {
+      if (!dataId) continue;
+      try { await idbDelete(dataId); } catch {}
+      if (window.electronAPI?.deleteVaultBlob) {
+        try { await window.electronAPI.deleteVaultBlob(`${dataId}.bin`); } catch {}
+      }
+    }
+    try {
+      const keys = filesLegacyKeysFor(normalizedEmail);
+      for (const key of keys) {
+        localStorage.removeItem(key);
+        try { await idbDeleteMeta(key); } catch {}
+      }
+    } catch {}
+    if (window.electronAPI?.readVaultIndex && window.electronAPI?.writeVaultIndex) {
+      try {
+        const idx = await window.electronAPI.readVaultIndex() || {};
+        delete idx[vaultIndexKey(normalizedEmail)];
+        await window.electronAPI.writeVaultIndex(idx);
+      } catch {}
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function runPendingDemoCleanup() {
+      if (session?.demo) return;
+      const raw = localStorage.getItem(DEMO_CLEANUP_KEY);
+      if (!raw) return;
+      try {
+        const payload = JSON.parse(raw);
+        const email = payload?.email || 'demo@cybervault.local';
+        const dataIds = Array.isArray(payload?.dataIds) ? payload.dataIds : [];
+        await clearDemoArtifactsStorageOnly(email, dataIds);
+      } catch {}
+      if (!cancelled) localStorage.removeItem(DEMO_CLEANUP_KEY);
+    }
+    runPendingDemoCleanup();
+    return () => { cancelled = true; };
+  }, [session?.demo, clearDemoArtifactsStorageOnly]);
+
+  useEffect(() => {
+    if (!session?.demo) return;
+    const onUnload = () => {
+      const email = session?.email || 'demo@cybervault.local';
+      const dataIds = (files || []).map(f => f?.dataId).filter(Boolean);
+      try { localStorage.setItem(DEMO_CLEANUP_KEY, JSON.stringify({ email, dataIds, ts: Date.now() })); } catch {}
+      try { localStorage.removeItem('neuralSession'); } catch {}
+      try {
+        const keys = filesLegacyKeysFor(email);
+        for (const key of keys) localStorage.removeItem(key);
+      } catch {}
+      if (window.electronAPI?.writeAppState) {
+        try { window.electronAPI.writeAppState({ session: null }); } catch {}
+      }
+    };
+    window.addEventListener('beforeunload', onUnload);
+    window.addEventListener('pagehide', onUnload);
+    return () => {
+      window.removeEventListener('beforeunload', onUnload);
+      window.removeEventListener('pagehide', onUnload);
+    };
+  }, [session?.demo, session?.email, files]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1831,18 +1905,25 @@ function App() {
     }
   }
 
-  async function exitDemoMode() {
-    const demoEmail = session?.email || 'demo@cybervault.local';
-    await clearDemoSessionArtifacts(demoEmail, files);
-    clearSession();
-    setProfileOpen(false);
-    setMissionOpen(false);
-    setDemoAccessNotice({ open: false, feature: '' });
-    setPage('login');
-    setMode('login');
-    setLocked(false);
-    setMasterPassword('');
-    setLoginPassword('');
+  async function exitDemoMode(opts = {}) {
+    const withTransition = !!opts.withTransition;
+    if (withTransition) showLoading('> closing.demo.mode');
+    try {
+      if (withTransition) await new Promise((resolve) => setTimeout(resolve, 3000));
+      const demoEmail = session?.email || 'demo@cybervault.local';
+      await clearDemoSessionArtifacts(demoEmail, files);
+      clearSession();
+      setProfileOpen(false);
+      setMissionOpen(false);
+      setDemoAccessNotice({ open: false, feature: '' });
+      setPage('login');
+      setMode('login');
+      setLocked(false);
+      setMasterPassword('');
+      setLoginPassword('');
+    } finally {
+      if (withTransition) hideLoading();
+    }
   }
 
   function handleRestrictedDemoFeature(feature) {
@@ -4025,6 +4106,19 @@ function App() {
         </div>
       )}
 
+      {demoSplashOpen && (
+        <div className="demo-entry-overlay" role="status" aria-live="polite" aria-label="Welcome to demo mode">
+          <div className="demo-entry-card">
+            <div className="demo-entry-emoji">😉</div>
+            <div className="demo-entry-title">Welcome to Demo Mode</div>
+            <div className="demo-entry-sub">Loading secure trial workspace...</div>
+            <div className="demo-entry-dots" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {locked && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: 'linear-gradient(145deg, var(--glass-bg), rgba(15, 15, 25, 0.95))', border: '1px solid var(--border-glow)', borderRadius: 16, padding: 24, width: 360, boxShadow: '0 0 50px rgba(0, 212, 255, 0.2)' }}>
@@ -4113,7 +4207,7 @@ function App() {
               <button
                 className="cyber-btn btn-primary"
                 onClick={async () => {
-                  await exitDemoMode();
+                  await exitDemoMode({ withTransition: true });
                   showNotification('> login.required.for.full.access', 'info');
                 }}
               >
@@ -4381,6 +4475,7 @@ function App() {
             generateChecksum={generateChecksum}
             ensureMasterPassword={ensureMasterPassword}
             showNotification={showNotification}
+            isDemo={!!session?.demo}
           />
         </Suspense>
       )}

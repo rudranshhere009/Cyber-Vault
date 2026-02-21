@@ -55,7 +55,7 @@ const formatFileSize = (bytes) => {
 	return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, generateChecksum, ensureMasterPassword, showNotification }) => {
+const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, generateChecksum, ensureMasterPassword, showNotification, isDemo = false }) => {
 	const hasElectron = Boolean(window.electronAPI);
 	const [messages, setMessages] = useState([]);
 	const [input, setInput] = useState('');
@@ -70,6 +70,10 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 	const [ocrType, setOcrType] = useState('all');
 	const messagesEndRef = useRef(null);
 	const recognitionRef = useRef(null);
+	const showDemoChatDenied = () => {
+		showNotification('> access.denied.login.to.use.ai.chatbot.with.ocr', 'error');
+		setMessages((prev) => [...prev, { sender: 'bot', text: 'AI chatbot access is disabled in Demo Mode. Log in to use OCR + AI chat.' }]);
+	};
 
 	const filteredFiles = React.useMemo(() => {
 		const q = ocrQuery.trim().toLowerCase();
@@ -124,6 +128,10 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 
 	// Voice input (speech-to-text)
 	const startListening = () => {
+		if (isDemo) {
+			showDemoChatDenied();
+			return;
+		}
 		if (!('webkitSpeechRecognition' in window)) {
 			alert('Speech recognition not supported in this browser.');
 			return;
@@ -253,6 +261,11 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 	// Q&A logic: Thor answers based on ocrText
 	const handleSend = async () => {
 		if (!input.trim()) return;
+		if (isDemo) {
+			showDemoChatDenied();
+			setInput('');
+			return;
+		}
 		const userMessage = { sender: 'user', text: input };
 		setMessages((prev) => [...prev, userMessage]);
 		setInput('');
@@ -595,7 +608,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 
 					<div className="ocr-right">
 						<div className="ocr-panel ocr-chat">
-							<div className="ocr-panel-title">Ask the Vault</div>
+							<div className="ocr-panel-title">{isDemo ? 'Ask the Vault (Login Required)' : 'Ask the Vault'}</div>
 							<div className="ocr-messages">
 								{messages.map((msg, index) => (
 									<div key={index} className={`ocr-msg ${msg.sender === 'user' ? 'user' : 'bot'}`}>
@@ -616,18 +629,22 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 							<div className="ocr-input-row">
 								<textarea
 									className="form-input"
-									placeholder={currentFile ? 'Ask about the selected file...' : 'Select a file to start...'}
+									placeholder={
+										isDemo
+											? 'Demo mode: OCR extraction only. Log in for AI chat.'
+											: (currentFile ? 'Ask about the selected file...' : 'Select a file to start...')
+									}
 									value={input}
 									onChange={e => setInput(e.target.value)}
 									onKeyPress={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
 									rows="3"
-									disabled={!currentFile || isExtracting}
+									disabled={!currentFile || isExtracting || isDemo}
 								/>
 								<button
 									onClick={isListening ? stopListening : startListening}
 									className="cyber-btn btn-primary"
 									title={isListening ? 'Stop voice input' : 'Speak your question'}
-									disabled={isThinking}
+									disabled={isThinking || isDemo}
 								>
 									{isListening ? (
 										<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
@@ -644,7 +661,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 								<button
 									onClick={handleSend}
 									className="cyber-btn btn-secondary"
-									disabled={!currentFile || isExtracting || !input.trim() || isThinking}
+									disabled={!currentFile || isExtracting || !input.trim() || isThinking || isDemo}
 									title="Send question"
 								>
 									{isThinking ? 'Thinking...' : 'Send'}

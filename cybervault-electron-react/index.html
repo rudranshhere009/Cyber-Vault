@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#dbe8f6" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
@@ -17,6 +17,15 @@
       href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&family=Oxanium:wght@500;600;700&display=swap"
     />
     <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+    />
+    <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&family=Oxanium:wght@500;600;700&display=swap"
       media="print"
@@ -27,12 +36,38 @@
         rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&family=Oxanium:wght@500;600;700&display=swap"
       />
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+      />
     </noscript>
+    <style>
+      html, body, #root {
+        margin: 0;
+        min-height: 100%;
+        font-size: 16px;
+        line-height: 1.35;
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+      }
+      body {
+        overflow-x: hidden;
+        font-family: "JetBrains Mono", monospace;
+        background: #040404;
+        color: #ffe8d6;
+      }
+      body.preboot #root {
+        visibility: hidden;
+      }
+    </style>
     <title>CyberVault - Neural Authentication</title>
   </head>
-  <body class="theme-night">
+  <body class="theme-night preboot">
     <script>
       (function () {
+        function revealApp() {
+          document.body.classList.remove('preboot');
+        }
         try {
           var storedTheme = localStorage.getItem('cvTheme');
           var initialTheme = storedTheme === 'frost' ? 'frost' : 'night';
@@ -43,6 +78,15 @@
           }
         } catch (_) {
           document.body.classList.add('theme-night');
+        }
+        if (document.fonts && document.fonts.ready) {
+          var timeout = setTimeout(revealApp, 1800);
+          document.fonts.ready.finally(function () {
+            clearTimeout(timeout);
+            revealApp();
+          });
+        } else {
+          window.addEventListener('load', revealApp, { once: true });
         }
       })();
     </script>

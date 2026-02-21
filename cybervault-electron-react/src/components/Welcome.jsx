@@ -141,19 +141,10 @@ function Welcome({ onLogin, onSignup, onDemo, onContinue }) {
         </section>
       </main>
 
-      <div className="ticker-wrap" aria-hidden="true">
-        <div className="ticker-track">
-          <span>THREAT MONITOR</span>
-          <span>IDENTITY CONFIDENCE</span>
-          <span>ZERO TRUST</span>
-          <span>AES-256</span>
-          <span>AUDIT READY</span>
-          <span>THREAT MONITOR</span>
-          <span>IDENTITY CONFIDENCE</span>
-          <span>ZERO TRUST</span>
-          <span>AES-256</span>
-          <span>AUDIT READY</span>
-        </div>
+      <div className="brand-license" aria-label="Application name and license">
+        <span className="brand-license-name">CyberVault</span>
+        <span className="brand-license-sep">|</span>
+        <span className="brand-license-text">Licensed Software • All Rights Reserved</span>
       </div>
     </div>
   );
