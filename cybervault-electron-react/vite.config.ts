@@ -8,6 +8,18 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('react') || id.includes('react-dom')) return 'react-vendor';
+          if (id.includes('tesseract.js')) return 'ocr-vendor';
+          if (id.includes('pdfjs-dist')) return 'pdf-vendor';
+          if (id.includes('@tensorflow') || id.includes('opencv.js')) return 'biometric-vendor';
+          return 'vendor';
+        },
+      },
+    },
   },
   server: {
     port: 5173,

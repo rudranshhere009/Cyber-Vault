@@ -6,13 +6,28 @@
     <meta name="theme-color" content="#dbe8f6" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-    <!-- preload fonts for faster rendering -->
+    <!-- Keep same fonts, but avoid blocking first paint -->
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    <link rel="dns-prefetch" href="//fonts.gstatic.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&family=Oxanium:wght@500;600;700&family=Exo+2:wght@500;600;700;900&family=Orbitron:wght@700;900&family=Rajdhani:wght@700;900&display=block"
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&family=Oxanium:wght@500;600;700&family=Exo+2:wght@500;600;700;900&family=Orbitron:wght@700;900&family=Rajdhani:wght@700;900&display=swap"
+    />
+    <link
       rel="stylesheet"
-    >
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&family=Oxanium:wght@500;600;700&family=Exo+2:wght@500;600;700;900&family=Orbitron:wght@700;900&family=Rajdhani:wght@700;900&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&family=Oxanium:wght@500;600;700&family=Exo+2:wght@500;600;700;900&family=Orbitron:wght@700;900&family=Rajdhani:wght@700;900&display=swap"
+      />
+    </noscript>
     <title>CyberVault - Neural Authentication</title>
   </head>
   <body class="theme-night">

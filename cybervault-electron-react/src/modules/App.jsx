@@ -1,14 +1,32 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
-import pdfWorker from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
-import OCRSection from '../components/Chatbot';
-import IrisModal from '../components/IrisModal'; // NEW: Import iris modal
-import IrisDetector from '../utils/irisDetection'; // NEW: Import iris detector
-import FingerprintAuth from '../components/FingerprintAuth'; // NEW: Import fingerprint auth
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Welcome from '../components/Welcome'; // Import welcome page
-import MissionMode from '../components/MissionMode';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+const OCRSection = lazy(() => import('../components/Chatbot'));
+const IrisModal = lazy(() => import('../components/IrisModal'));
+const FingerprintAuth = lazy(() => import('../components/FingerprintAuth'));
+const MissionMode = lazy(() => import('../components/MissionMode'));
+
+let pdfJsLibPromise;
+async function loadPdfJsLib() {
+  if (!pdfJsLibPromise) {
+    pdfJsLibPromise = Promise.all([
+      import('pdfjs-dist/legacy/build/pdf.mjs'),
+      import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'),
+    ]).then(([pdfjsLib, workerUrl]) => {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl.default;
+      return pdfjsLib;
+    });
+  }
+  return pdfJsLibPromise;
+}
+
+let irisDetectorPromise;
+async function loadIrisDetector() {
+  if (!irisDetectorPromise) {
+    irisDetectorPromise = import('../utils/irisDetection').then((mod) => new mod.default());
+  }
+  return irisDetectorPromise;
+}
 
 function useMatrixEffect() {
   useEffect(() => {
@@ -559,6 +577,17 @@ function AvatarCropModal({ open, src, zoom, rotation, onZoom, onRotate, onCancel
 
 function App() {
   useEasterEgg();
+  useEffect(() => {
+    const warmPdf = () => {
+      loadPdfJsLib().catch(() => {});
+    };
+    if (window.requestIdleCallback) {
+      const id = window.requestIdleCallback(warmPdf, { timeout: 4000 });
+      return () => window.cancelIdleCallback?.(id);
+    }
+    const timer = setTimeout(warmPdf, 2500);
+    return () => clearTimeout(timer);
+  }, []);
   const { session, saveSession, clearSession, sessionLoaded } = useSession();
   const [profileOpen, setProfileOpen] = useState(false);
   const [theme, setTheme] = useState('night');
@@ -689,8 +718,6 @@ function App() {
   const [irisMode, setIrisMode] = useState('register');
   const signupIrisResolveRef = useRef(null);
   const loginIrisResolveRef = useRef(null);
-  const [irisDetector] = useState(() => new IrisDetector());
-  
   // NEW: Fingerprint auth states
   const [fingerprintModalOpen, setFingerprintModalOpen] = useState(false);
   const [fingerprintModalData, setFingerprintModalData] = useState(null);
@@ -1402,6 +1429,7 @@ function App() {
   // NEW: Iris functions
   async function startIrisRegistration() {
     try {
+      const irisDetector = await loadIrisDetector();
       await irisDetector.initialize();
     } catch (e) {
       showNotification('> iris.module.load.failed', 'error');
@@ -1416,6 +1444,7 @@ function App() {
 
   async function startIrisLogin() {
     try {
+      const irisDetector = await loadIrisDetector();
       await irisDetector.initialize();
     } catch (e) {
       showNotification('> iris.module.load.failed', 'error');
@@ -1454,7 +1483,8 @@ function App() {
     setIrisModalOpen(false);
   }
 
-  function compareIrisTemplates(template1, template2) {
+  async function compareIrisTemplates(template1, template2) {
+    const irisDetector = await loadIrisDetector();
     return irisDetector.compareIrisTemplates(template1, template2, 0.6);
   }
 
@@ -1525,7 +1555,7 @@ function App() {
       }
       
       const liveIrisTemplate = await startIrisLogin();
-      const isMatch = compareIrisTemplates(liveIrisTemplate, stored.irisTemplate);
+      const isMatch = await compareIrisTemplates(liveIrisTemplate, stored.irisTemplate);
       
       if (isMatch) {
         showNotification('> neural.iris.link.established', 'success');
@@ -1945,6 +1975,7 @@ function App() {
 
       if (inferredType === 'application/pdf') {
         try {
+          const pdfjsLib = await loadPdfJsLib();
           const pdfData = bytes?.slice ? bytes.slice(0) : new Uint8Array(bytes);
           const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
           const page = await pdf.getPage(1);
@@ -2285,7 +2316,7 @@ function App() {
       const stored = JSON.parse(localStorage.getItem('neuralUser_' + email) || '{}');
       if (!stored.email || !stored.irisTemplate) { showNotification('> iris.login.not.registered', 'error'); return; }
       const liveIrisTemplate = await startIrisLogin();
-      const isMatch = compareIrisTemplates(liveIrisTemplate, stored.irisTemplate);
+      const isMatch = await compareIrisTemplates(liveIrisTemplate, stored.irisTemplate);
       if (isMatch) {
         setLocked(false);
         showNotification('> neural.vault.unlocked.via.iris', 'success');
@@ -2616,6 +2647,7 @@ function App() {
       }
       setPdfRenderState('loading');
       try {
+        const pdfjsLib = await loadPdfJsLib();
         const src = viewingFileContent.data;
         // pdf.js transfers the ArrayBuffer to the worker; clone to avoid "detached" errors on re-render.
         const pdfData = src?.slice ? src.slice(0) : new Uint8Array(src);
@@ -3923,36 +3955,42 @@ function App() {
       />
 
       {/* NEW: Iris Modal */}
-      <IrisModal
-        mode={irisMode}
-        open={irisModalOpen}
-        onClose={closeIrisModal}
-        onRegistered={onIrisRegistered}
-        onAuthenticated={onIrisAuthenticated}
-      />
+      {irisModalOpen && (
+        <Suspense fallback={null}>
+          <IrisModal
+            mode={irisMode}
+            open={irisModalOpen}
+            onClose={closeIrisModal}
+            onRegistered={onIrisRegistered}
+            onAuthenticated={onIrisAuthenticated}
+          />
+        </Suspense>
+      )}
 
       {/* NEW: Fingerprint Modal */}
       {fingerprintModalOpen && fingerprintModalData && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: 'linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(245, 248, 252, 0.98))', border: '1px solid var(--border-glow)', borderRadius: 20, padding: 30, width: '90%', maxWidth: 500, boxShadow: '0 0 50px rgba(159, 179, 223, 0.3)' }}>
-            <FingerprintAuth
-              username={fingerprintModalData.email}
-              masterPassword={fingerprintModalData.masterPassword || loginPassword}
-              onAuthSuccess={(result) => {
-                setFingerprintModalOpen(false);
-                if (fingerprintModalData.resolve) {
-                  fingerprintModalData.resolve(result);
-                }
-                setFingerprintModalData(null);
-              }}
-              onAuthError={(error) => {
-                setFingerprintModalOpen(false);
-                if (fingerprintModalData.reject) {
-                  fingerprintModalData.reject(error);
-                }
-                setFingerprintModalData(null);
-              }}
-            />
+            <Suspense fallback={null}>
+              <FingerprintAuth
+                username={fingerprintModalData.email}
+                masterPassword={fingerprintModalData.masterPassword || loginPassword}
+                onAuthSuccess={(result) => {
+                  setFingerprintModalOpen(false);
+                  if (fingerprintModalData.resolve) {
+                    fingerprintModalData.resolve(result);
+                  }
+                  setFingerprintModalData(null);
+                }}
+                onAuthError={(error) => {
+                  setFingerprintModalOpen(false);
+                  if (fingerprintModalData.reject) {
+                    fingerprintModalData.reject(error);
+                  }
+                  setFingerprintModalData(null);
+                }}
+              />
+            </Suspense>
             <div style={{ textAlign: 'center', marginTop: 20 }}>
               <button 
                 className="cyber-btn btn-secondary" 
@@ -4138,20 +4176,28 @@ function App() {
       />
 
       {/* Vault pet removed per user's request */}
-      <MissionMode open={missionOpen} onClose={() => setMissionOpen(false)} />
+      {missionOpen && (
+        <Suspense fallback={null}>
+          <MissionMode open={missionOpen} onClose={() => setMissionOpen(false)} />
+        </Suspense>
+      )}
 
-      <OCRSection
-        files={files}
-        open={isOCRSectionOpen}
-        onClose={() => setIsOCRSectionOpen(false)}
-        idbGet={idbGet}
-        deriveQuantumKey={deriveQuantumKey}
-        enc={enc}
-        dec={dec}
-        generateChecksum={generateChecksum}
-        ensureMasterPassword={ensureMasterPassword}
-        showNotification={showNotification}
-      />
+      {isOCRSectionOpen && (
+        <Suspense fallback={null}>
+          <OCRSection
+            files={files}
+            open={isOCRSectionOpen}
+            onClose={() => setIsOCRSectionOpen(false)}
+            idbGet={idbGet}
+            deriveQuantumKey={deriveQuantumKey}
+            enc={enc}
+            dec={dec}
+            generateChecksum={generateChecksum}
+            ensureMasterPassword={ensureMasterPassword}
+            showNotification={showNotification}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
