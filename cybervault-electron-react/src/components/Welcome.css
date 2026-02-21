@@ -2283,9 +2283,11 @@
   background: rgba(10, 16, 30, 0.5);
   backdrop-filter: blur(4px);
   z-index: 10040;
-  display: grid;
-  place-items: center;
-  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: max(12px, env(safe-area-inset-top)) 20px 20px;
+  overflow-y: auto;
 }
 
 .install-modal {
@@ -2296,6 +2298,7 @@
   border: 1px solid rgba(103, 135, 175, 0.35);
   box-shadow: 0 20px 60px rgba(19, 38, 67, 0.25);
   color: #10213d;
+  margin-top: 0;
 }
 
 .install-title {
@@ -2492,6 +2495,7 @@
   .install-modal {
     width: min(96vw, 560px) !important;
     padding: 16px !important;
+    margin-top: 0 !important;
   }
 }
 
