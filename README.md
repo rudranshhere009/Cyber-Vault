@@ -47,6 +47,7 @@ npm run dev
 - [Project Structure](#project-structure)
 - [Troubleshooting](#troubleshooting)
 - [Known Gaps and Hardening Opportunities](#known-gaps-and-hardening-opportunities)
+- [Future Expansion (In Progress)](#future-expansion-in-progress)
 - [Release Notes](#release-notes)
 - [Contributing Notes](#contributing-notes)
 - [License](#license)
@@ -452,6 +453,28 @@ Cyber-Vault-main/
 - Expand platform packaging/signing and release automation.
 - Add automated integration tests for backup/restore and threat/audit workflows.
 - Introduce secure secret handling patterns beyond env file usage.
+
+## Future Expansion (In Progress)
+
+The following roadmap items are **partially implemented** and under active development:
+
+### Blockchain-backed audit and integrity trail
+
+- Append-only audit anchoring for high-value events (backup, restore, key-rotation, compliance exports).
+- Planned hash anchoring pipeline so vault event digests can be independently verified.
+- Current status: event stream and checksum primitives exist; blockchain integration layer is in-progress.
+
+### Containerization and deploy consistency
+
+- Planned container-first development and CI workflows for predictable builds.
+- Docker/Docker Compose profiles are being prepared for isolated runtime, reproducible OCR/AI services, and clean environment parity.
+- Current status: project structure and process separation support this direction; formal container manifests and pipeline hardening are in-progress.
+
+### Security hardening program
+
+- Progressive hardening of secret handling, credential-store protection, and runtime policy enforcement.
+- Planned additions include stricter key lifecycle management, stronger local at-rest controls, and enterprise-grade security checks.
+- Current status: core encryption/auth paths are operational; advanced hardening controls are partially done and actively being expanded.
 
 ## Release Notes
 
