@@ -14,6 +14,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteVaultBlob: (filename) => ipcRenderer.invoke('delete-vault-blob', filename),
   readAppState: () => ipcRenderer.invoke('read-app-state'),
   writeAppState: (data) => ipcRenderer.invoke('write-app-state', data),
+  dbGetUser: (email) => ipcRenderer.invoke('db-get-user', email),
+  dbUpsertUser: (user) => ipcRenderer.invoke('db-upsert-user', user),
+  dbRecordLogin: (payload) => ipcRenderer.invoke('db-record-login', payload),
+  dbReplaceUserFiles: (payload) => ipcRenderer.invoke('db-replace-user-files', payload),
+  dbGetInsights: () => ipcRenderer.invoke('db-get-insights'),
 
   saveAuditReport: (defaultName, payload) => ipcRenderer.invoke('save-audit-report', defaultName, payload),
   saveAuditReportPdf: (defaultName, html) => ipcRenderer.invoke('save-audit-report-pdf', defaultName, html),

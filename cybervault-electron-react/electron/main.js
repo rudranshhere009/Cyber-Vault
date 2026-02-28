@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell, ipcMain, dialog, session } from 'electron';
 import 'dotenv/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { initCyberVaultDb, UserModel, LoginEventModel, FileOwnershipModel, getDbInsights } from './db.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -49,6 +50,10 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  initCyberVaultDb(app.getPath('userData')).catch((error) => {
+    console.error('Failed to initialize CyberVault database:', error);
+  });
+
   createWindow();
 
   if (!isDev) {
@@ -122,6 +127,65 @@ ipcMain.handle('write-credential-store', async (event, filename, data) => {
     return true;
   } catch (error) {
     console.error('Error writing credential store:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('db-get-user', async (event, email) => {
+  try {
+    if (!email) return null;
+    return await UserModel.findByEmail(String(email).toLowerCase());
+  } catch (error) {
+    console.error('Error fetching user from DB:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('db-upsert-user', async (event, user) => {
+  try {
+    if (!user?.email) throw new Error('email_required');
+    return await UserModel.upsert({
+      ...user,
+      email: String(user.email).toLowerCase(),
+    });
+  } catch (error) {
+    console.error('Error upserting user in DB:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('db-record-login', async (event, payload) => {
+  try {
+    if (!payload?.email) throw new Error('email_required');
+    await LoginEventModel.create({
+      email: String(payload.email).toLowerCase(),
+      method: payload.method || 'password',
+      success: payload.success !== false,
+      loggedInAt: payload.loggedInAt || new Date().toISOString(),
+    });
+    return true;
+  } catch (error) {
+    console.error('Error recording login in DB:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('db-replace-user-files', async (event, payload) => {
+  try {
+    if (!payload?.email) throw new Error('email_required');
+    await FileOwnershipModel.replaceForUser(String(payload.email).toLowerCase(), Array.isArray(payload.files) ? payload.files : []);
+    return true;
+  } catch (error) {
+    console.error('Error replacing user files in DB:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('db-get-insights', async () => {
+  try {
+    return await getDbInsights();
+  } catch (error) {
+    console.error('Error fetching DB insights:', error);
     throw error;
   }
 });

@@ -829,6 +829,8 @@ function App() {
   const [fingerprintModalOpen, setFingerprintModalOpen] = useState(false);
   const [fingerprintModalData, setFingerprintModalData] = useState(null);
   const searchInputRef = useRef(null);
+  const [currentUserRecord, setCurrentUserRecord] = useState(null);
+  const [dbInsights, setDbInsights] = useState({ users: [], logins: [], files: [] });
 
   useEffect(() => {
     if (theme === 'night') {
@@ -982,6 +984,82 @@ function App() {
   const vaultIndexKey = (email) => normalizeEmail(email) || 'anon';
   const DEMO_CLEANUP_KEY = 'cyberVaultDemoCleanup';
 
+  const getUserRecordByEmail = useCallback(async (email) => {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) return {};
+
+    if (window.electronAPI?.dbGetUser) {
+      try {
+        const dbUser = await window.electronAPI.dbGetUser(normalizedEmail);
+        if (dbUser?.email) return dbUser;
+      } catch {}
+    }
+
+    try {
+      const legacy = JSON.parse(localStorage.getItem('neuralUser_' + normalizedEmail) || '{}');
+      if (legacy?.email) {
+        const normalizedLegacy = { ...legacy, email: normalizedEmail };
+        if (window.electronAPI?.dbUpsertUser) {
+          try { await window.electronAPI.dbUpsertUser(normalizedLegacy); } catch {}
+        }
+        return normalizedLegacy;
+      }
+    } catch {}
+
+    return {};
+  }, []);
+
+  const upsertUserRecord = useCallback(async (userData) => {
+    if (!userData?.email) return null;
+    const payload = { ...userData, email: normalizeEmail(userData.email) };
+    if (window.electronAPI?.dbUpsertUser) {
+      try {
+        return await window.electronAPI.dbUpsertUser(payload);
+      } catch {}
+    }
+    try {
+      localStorage.setItem('neuralUser_' + payload.email, JSON.stringify(payload));
+    } catch {}
+    return payload;
+  }, []);
+
+  const recordLoginEvent = useCallback(async (email, method = 'password', success = true) => {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) return;
+    if (window.electronAPI?.dbRecordLogin) {
+      try {
+        await window.electronAPI.dbRecordLogin({ email: normalizedEmail, method, success, loggedInAt: new Date().toISOString() });
+      } catch {}
+    }
+  }, []);
+
+  const refreshDbInsights = useCallback(async () => {
+    if (!window.electronAPI?.dbGetInsights) return;
+    try {
+      const insights = await window.electronAPI.dbGetInsights();
+      if (insights?.users && insights?.logins && insights?.files) setDbInsights(insights);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function syncCurrentUserRecord() {
+      if (!session?.email || session?.demo) {
+        if (!cancelled) setCurrentUserRecord(null);
+        return;
+      }
+      const user = await getUserRecordByEmail(session.email);
+      if (!cancelled) setCurrentUserRecord(user?.email ? user : null);
+    }
+    syncCurrentUserRecord();
+    return () => { cancelled = true; };
+  }, [session?.email, session?.demo, getUserRecordByEmail]);
+
+  useEffect(() => {
+    if (!profileOpen) return;
+    refreshDbInsights();
+  }, [profileOpen, refreshDbInsights]);
+
   const clearDemoArtifactsStorageOnly = useCallback(async (email, dataIds = []) => {
     const normalizedEmail = normalizeEmail(email) || 'demo@cybervault.local';
     for (const dataId of dataIds) {
@@ -1115,6 +1193,14 @@ function App() {
     const key = filesKeyFor(session.email);
     try { localStorage.setItem(key, JSON.stringify(files)); } catch {}
     try { idbPutMeta(key, files); } catch {}
+    if (window.electronAPI?.dbReplaceUserFiles) {
+      (async () => {
+        try {
+          await window.electronAPI.dbReplaceUserFiles({ email: normalizeEmail(session.email), files });
+          if (profileOpen) await refreshDbInsights();
+        } catch {}
+      })();
+    }
     if (window.electronAPI?.writeVaultIndex) {
       (async () => {
         try {
@@ -1713,14 +1799,18 @@ function App() {
     showLoading('> authenticating.neural.signature');
     try {
       await simulateNetworkDelay(1000);
-      const stored = JSON.parse(localStorage.getItem('neuralUser_' + loginEmail) || '{}');
+      const stored = await getUserRecordByEmail(loginEmail);
       if (stored.email && await verifyPassword(loginPassword, stored.passwordHash, stored.salt)) {
         hideLoading();
         showNotification('> neural.link.established', 'success');
-        const s = { email: loginEmail, username: stored.username, loginTime: new Date().toISOString(), masterPassword: loginPassword };
+        const s = { email: stored.email, username: stored.username, loginTime: new Date().toISOString(), masterPassword: loginPassword };
         saveSession(s);
+        setCurrentUserRecord(stored);
+        await recordLoginEvent(stored.email, 'password', true);
+        if (profileOpen) await refreshDbInsights();
         setTimeout(() => setPage('vault'), 800);
       } else {
+        await recordLoginEvent(loginEmail, 'password', false);
         throw new Error('invalid');
       }
     } catch (err) {
@@ -1732,7 +1822,7 @@ function App() {
   async function handleFaceLogin() {
     try {
       if (!loginEmail) { showNotification('> enter.email.for.face.login', 'error'); return; }
-      const stored = JSON.parse(localStorage.getItem('neuralUser_' + loginEmail) || '{}');
+      const stored = await getUserRecordByEmail(loginEmail);
       if (!stored.email || !stored.faceDescriptor) { showNotification('> face.login.not.registered', 'error'); return; }
       const liveDesc = await startFaceLogin();
       const dist = euclidean(liveDesc, stored.faceDescriptor);
@@ -1740,8 +1830,12 @@ function App() {
         showNotification('> neural.face.link.established', 'success');
         const s = { email: stored.email, username: stored.username, loginTime: new Date().toISOString() };
         saveSession(s);
+        setCurrentUserRecord(stored);
+        await recordLoginEvent(stored.email, 'face', true);
+        if (profileOpen) await refreshDbInsights();
         setPage('vault');
       } else {
+        await recordLoginEvent(stored.email, 'face', false);
         showNotification('> face.mismatch.authentication.failed', 'error');
       }
     } catch (e) {
@@ -1757,7 +1851,7 @@ function App() {
         return; 
       }
       
-      const stored = JSON.parse(localStorage.getItem('neuralUser_' + loginEmail) || '{}');
+      const stored = await getUserRecordByEmail(loginEmail);
       if (!stored.email || !stored.irisTemplate) { 
         showNotification('> iris.login.not.registered', 'error'); 
         return; 
@@ -1770,8 +1864,12 @@ function App() {
         showNotification('> neural.iris.link.established', 'success');
         const s = { email: stored.email, username: stored.username, loginTime: new Date().toISOString() };
         saveSession(s);
+        setCurrentUserRecord(stored);
+        await recordLoginEvent(stored.email, 'iris', true);
+        if (profileOpen) await refreshDbInsights();
         setPage('vault');
       } else {
+        await recordLoginEvent(stored.email, 'iris', false);
         showNotification('> iris.mismatch.authentication.failed', 'error');
       }
     } catch (e) {
@@ -1789,7 +1887,7 @@ function App() {
         return; 
       }
       
-      const stored = JSON.parse(localStorage.getItem('neuralUser_' + loginEmail) || '{}');
+      const stored = await getUserRecordByEmail(loginEmail);
       if (!stored.email) { 
         showNotification('> user.not.registered', 'error'); 
         return; 
@@ -1823,6 +1921,9 @@ function App() {
           masterPassword: loginPassword // Use the password they'd normally enter
         };
         saveSession(s);
+        setCurrentUserRecord(stored);
+        await recordLoginEvent(stored.email, 'fingerprint', true);
+        if (profileOpen) await refreshDbInsights();
         setPage('vault');
       }
       
@@ -1859,7 +1960,8 @@ function App() {
     showLoading('> creating.neural.profile');
     try {
       await simulateNetworkDelay(800);
-      if (localStorage.getItem('neuralUser_' + signupEmail)) throw new Error('exists');
+      const existing = await getUserRecordByEmail(signupEmail);
+      if (existing?.email) throw new Error('exists');
 
       hideLoading();
       showNotification('> begin.biometric.registration', 'info');
@@ -1900,7 +2002,7 @@ function App() {
       const passwordHash = await hashPassword(signupPassword, salt);
       const userData = { 
         username: signupUsername, 
-        email: signupEmail, 
+        email: normalizeEmail(signupEmail), 
         passwordHash, 
         salt, 
         neuralPin: signupNeuralPin, 
@@ -1909,7 +2011,8 @@ function App() {
         irisTemplate, // NEW: Store iris template
         fingerprintEnabled: fingerprintRegistered // NEW: Track if fingerprint was registered
       };
-      localStorage.setItem('neuralUser_' + signupEmail, JSON.stringify(userData));
+      await upsertUserRecord(userData);
+      if (profileOpen) await refreshDbInsights();
       hideLoading();
       
       const biometricCount = 2 + (fingerprintRegistered ? 1 : 0); // face + iris + optional fingerprint
@@ -2530,7 +2633,7 @@ function App() {
     }
 
     try {
-      const stored = JSON.parse(localStorage.getItem('neuralUser_' + session?.email) || '{}');
+      const stored = await getUserRecordByEmail(session?.email);
       if (stored?.passwordHash && stored?.salt && await verifyPassword(pwd, stored.passwordHash, stored.salt)) {
         setMasterPassword(pwd);
         setLocked(false);
@@ -2552,7 +2655,7 @@ function App() {
     try {
       const email = session?.email;
       if (!email) { showNotification('> no.active.session', 'error'); return; }
-      const stored = JSON.parse(localStorage.getItem('neuralUser_' + email) || '{}');
+      const stored = await getUserRecordByEmail(email);
       if (!stored.email || !stored.faceDescriptor) { showNotification('> face.login.not.registered', 'error'); return; }
       const liveDesc = await startFaceLogin();
       const dist = euclidean(liveDesc, stored.faceDescriptor);
@@ -2572,7 +2675,7 @@ function App() {
     try {
       const email = session?.email;
       if (!email) { showNotification('> no.active.session', 'error'); return; }
-      const stored = JSON.parse(localStorage.getItem('neuralUser_' + email) || '{}');
+      const stored = await getUserRecordByEmail(email);
       if (!stored.email || !stored.irisTemplate) { showNotification('> iris.login.not.registered', 'error'); return; }
       const liveIrisTemplate = await startIrisLogin();
       const isMatch = await compareIrisTemplates(liveIrisTemplate, stored.irisTemplate);
@@ -2771,7 +2874,7 @@ function App() {
 
   const securityMetrics = useMemo(() => {
     const now = Date.now();
-    const storedUser = session?.email ? JSON.parse(localStorage.getItem('neuralUser_' + session.email) || '{}') : {};
+    const storedUser = currentUserRecord || {};
     const biometricCount = [storedUser?.faceDescriptor, storedUser?.irisTemplate, storedUser?.fingerprintEnabled].filter(Boolean).length;
     const latestBackup = activityEvents
       .filter(e => e.type === 'backup')
@@ -2807,7 +2910,7 @@ function App() {
     });
 
     return { score, biometricCount, backupAgeHours, riskStatus, anomalyStatus, anomalies24h: anomalies24h.length, heatbars };
-  }, [activityEvents, threatEvents, entropyScore, autoLockEnabled, session?.email]);
+  }, [activityEvents, threatEvents, entropyScore, autoLockEnabled, currentUserRecord]);
 
   const activityFiltered = useMemo(() => {
     const now = Date.now();
@@ -2877,14 +2980,12 @@ function App() {
   }, [threatEvents]);
 
   const neuralPinConfigured = useMemo(() => {
-    if (!session?.email) return false;
-    try {
-      const storedUser = JSON.parse(localStorage.getItem('neuralUser_' + session.email) || '{}');
-      return Boolean(storedUser.neuralPin);
-    } catch {
-      return false;
-    }
-  }, [session?.email]);
+    return Boolean(currentUserRecord?.neuralPin);
+  }, [currentUserRecord]);
+
+  const dbUsersPreview = useMemo(() => (dbInsights?.users || []).slice(0, 8), [dbInsights]);
+  const dbLoginsPreview = useMemo(() => (dbInsights?.logins || []).slice(0, 10), [dbInsights]);
+  const dbFilesPreview = useMemo(() => (dbInsights?.files || []).slice(0, 10), [dbInsights]);
 
   useEffect(() => {
     if (activePanel !== 'security') {
@@ -3013,15 +3114,14 @@ function App() {
     setViewerFullscreen(v => !v);
   }
 
-  function unlockAnomalyDetails() {
+  async function unlockAnomalyDetails() {
     if (session?.demo) {
       setAnomalyUnlocked(true);
       showNotification('> demo.anomaly.panel.unlocked', 'info');
       return;
     }
     if (!session?.email) return;
-    let storedUser = {};
-    try { storedUser = JSON.parse(localStorage.getItem('neuralUser_' + session.email) || '{}'); } catch {}
+    const storedUser = await getUserRecordByEmail(session.email);
     if (!storedUser.neuralPin) {
       showNotification('> neural.pin.not.set', 'error');
       return;
@@ -3071,7 +3171,7 @@ function App() {
   async function handleViewFile() {
     if (!viewingFile) return;
     if (!session?.demo) {
-      const storedUser = JSON.parse(localStorage.getItem('neuralUser_' + session.email) || '{}');
+      const storedUser = await getUserRecordByEmail(session.email);
       if (storedUser.neuralPin !== viewingFilePin) {
         showNotification('> invalid.neural.pin', 'error');
         return;
@@ -4464,6 +4564,28 @@ function App() {
                 <div className="profile-inline">
                   <span>Vault Health</span>
                   <span className="profile-pill">Operational • Quantum Stable</span>
+                </div>
+              </div>
+
+              <div className="profile-card">
+                <div className="profile-card-title">Database Registry</div>
+                <div className="profile-card-subtitle">Signed Up Users</div>
+                <div className="recovery-grid">
+                  {dbUsersPreview.length ? dbUsersPreview.map((user) => (
+                    <span key={user.id || user.email} className="profile-pill">{user.username} • {user.email}</span>
+                  )) : <span className="profile-pill">No users found</span>}
+                </div>
+                <div className="profile-card-subtitle" style={{ marginTop: 12 }}>Recent Logins</div>
+                <div className="recovery-grid">
+                  {dbLoginsPreview.length ? dbLoginsPreview.map((entry) => (
+                    <span key={entry.id} className="profile-pill">{entry.userEmail} • {entry.loginMethod} • {new Date(entry.loggedInAt).toLocaleString()}</span>
+                  )) : <span className="profile-pill">No login records</span>}
+                </div>
+                <div className="profile-card-subtitle" style={{ marginTop: 12 }}>Stored Files Ownership</div>
+                <div className="recovery-grid">
+                  {dbFilesPreview.length ? dbFilesPreview.map((entry) => (
+                    <span key={entry.id} className="profile-pill">{entry.userEmail} • {entry.fileName}</span>
+                  )) : <span className="profile-pill">No file records</span>}
                 </div>
               </div>
             </div>
