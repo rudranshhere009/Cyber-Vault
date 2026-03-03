@@ -547,7 +547,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 					} catch (err) {
 						lastError = err;
 						const msg = String(err?.message || err || '');
-						const missingGroqHandler = /no handler registered for ['"]groq-ocr-answer['"]/i.test(msg);
+						const missingGroqHandler = /no handler registered/i.test(msg) && /groq-ocr-answer/i.test(msg);
 						if (handler.name === 'groq' && missingGroqHandler) {
 							continue;
 						}

@@ -1,10 +1,14 @@
 import { app, BrowserWindow, shell, ipcMain, dialog, session } from 'electron';
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initCyberVaultDb, UserModel, LoginEventModel, FileOwnershipModel, getDbInsights } from './db.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load env files from app root regardless of process cwd.
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+dotenv.config({ path: path.join(__dirname, '..', '.env.local'), override: true });
 
 const isDev = !app.isPackaged; // 👈 safer check
 
