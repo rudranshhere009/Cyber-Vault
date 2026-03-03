@@ -439,6 +439,7 @@ Cyber-Vault-main/
 - Configure `GROQ_API_KEY`.
 - Check network availability.
 - Validate `GROQ_MODEL` value.
+- For Vercel web deployment, add `GROQ_API_KEY` and `GROQ_MODEL` in Vercel Project Environment Variables and redeploy.
 
 ### Backup restore fails
 

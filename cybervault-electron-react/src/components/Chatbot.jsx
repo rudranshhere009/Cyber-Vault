@@ -500,9 +500,31 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 
 		const fileQuery = useFileContext || isFileRelatedQuestion(userInput);
 
+		const webGroqAnswer = async (reqPayload) => {
+			const response = await fetch('/api/groq-ocr-answer', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(reqPayload || {}),
+			});
+			let json = null;
+			try {
+				json = await response.json();
+			} catch {
+				json = null;
+			}
+			if (!response.ok) {
+				throw new Error(json?.detail || `HTTP ${response.status}`);
+			}
+			if (!json || typeof json !== 'object') {
+				throw new Error('Invalid API response');
+			}
+			return json;
+		};
+
 		const aiHandlers = [
 			{ name: 'groq', fn: window.electronAPI?.groqOcrAnswer },
 			{ name: 'legacy', fn: window.electronAPI?.openaiOcrAnswer },
+			{ name: 'web-groq', fn: !window.electronAPI ? webGroqAnswer : null },
 		].filter((h) => typeof h.fn === 'function');
 		if (!aiHandlers.length) {
 			setMessages((prev) => [...prev, { sender: 'bot', text: 'AI handler is unavailable in this runtime.', category: 'ai' }]);
