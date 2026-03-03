@@ -446,7 +446,69 @@ const handleGroqOcrAnswer = async (payload) => {
         .filter(Boolean);
     };
 
-    const messages = normalizeMessages(payload?.input);
+    const buildMessagesFromQuestionAndFile = (p) => {
+      const question = String(p?.question || '').trim();
+      if (!question) return [];
+      const file = p?.file;
+      if (!file?.base64) {
+        return [
+          {
+            role: 'system',
+            content:
+              'You are CyberVault assistant. Answer clearly and concisely. If question references a file but no file is attached, ask user to select one.',
+          },
+          { role: 'user', content: question },
+        ];
+      }
+
+      const fileName = String(file?.name || 'document.bin');
+      const fileType = String(file?.type || 'application/octet-stream');
+      const fileBase64 = String(file?.base64 || '');
+      const maxChars = Number(process.env.GROQ_FILE_BASE64_MAX_CHARS || 120000);
+      const safeBase64 = fileBase64.length > maxChars ? fileBase64.slice(0, maxChars) : fileBase64;
+      const truncated = fileBase64.length > maxChars;
+
+      // For image files, send a true multimodal payload when model supports it.
+      if (/^image\//i.test(fileType)) {
+        return [
+          {
+            role: 'system',
+            content:
+              'You are CyberVault assistant. Use attached image to answer the user question. Be concise and factual. If unsure, say what is uncertain.',
+          },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: `Question: ${question}\nFile: ${fileName} (${fileType})` },
+              { type: 'image_url', image_url: { url: `data:${fileType};base64,${safeBase64}` } },
+            ],
+          },
+        ];
+      }
+
+      // For non-image files, send raw file bytes as base64 directly to the model.
+      const attachmentNote = truncated
+        ? `The base64 payload is truncated to ${maxChars} chars due to token limits.`
+        : 'The base64 payload is complete.';
+      const blobText = `Question: ${question}
+Attached file name: ${fileName}
+Attached file type: ${fileType}
+${attachmentNote}
+Attached file base64:
+${safeBase64}`;
+      return [
+        {
+          role: 'system',
+          content:
+            'You are CyberVault assistant. Analyze the provided file payload and answer the user question clearly. If payload is insufficient, state limitations explicitly.',
+        },
+        { role: 'user', content: blobText },
+      ];
+    };
+
+    const messages = payload?.question
+      ? buildMessagesFromQuestionAndFile(payload)
+      : normalizeMessages(payload?.input);
     if (!messages.length) {
       return { error: 'invalid_payload', detail: 'No valid prompt content found.' };
     }
