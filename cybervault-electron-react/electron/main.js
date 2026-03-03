@@ -398,28 +398,63 @@ ipcMain.handle('save-vault-backup', async (event, defaultName, payload) => {
   }
 });
 
-ipcMain.handle('openai-ocr-answer', async (event, payload) => {
+const handleGroqOcrAnswer = async (payload) => {
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
       return { error: 'missing_api_key' };
     }
-    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
     const headers = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
     };
-    if (process.env.OPENAI_PROJECT) headers['OpenAI-Project'] = process.env.OPENAI_PROJECT;
-    if (process.env.OPENAI_ORG) headers['OpenAI-Organization'] = process.env.OPENAI_ORG;
 
-    const res = await fetch('https://api.openai.com/v1/responses', {
+    const flattenContentToText = (content) => {
+      if (typeof content === 'string') return content;
+      if (Array.isArray(content)) {
+        return content
+          .map((part) => {
+            if (!part) return '';
+            if (typeof part === 'string') return part;
+            if (typeof part?.text === 'string') return part.text;
+            return '';
+          })
+          .filter(Boolean)
+          .join('\n');
+      }
+      if (content && typeof content?.text === 'string') return content.text;
+      return '';
+    };
+
+    const normalizeMessages = (rawInput) => {
+      if (!rawInput) return [];
+      if (!Array.isArray(rawInput)) {
+        const text = flattenContentToText(rawInput);
+        return text ? [{ role: 'user', content: text }] : [];
+      }
+      return rawInput
+        .map((msg) => {
+          const role = ['system', 'user', 'assistant'].includes(msg?.role) ? msg.role : 'user';
+          const content = flattenContentToText(msg?.content);
+          return content ? { role, content } : null;
+        })
+        .filter(Boolean);
+    };
+
+    const messages = normalizeMessages(payload?.input);
+    if (!messages.length) {
+      return { error: 'invalid_payload', detail: 'No valid prompt content found.' };
+    }
+
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers,
       body: JSON.stringify({
         model,
-        input: payload.input,
+        messages,
         temperature: 0.2,
-        max_output_tokens: 500,
+        max_tokens: 500,
       }),
     });
     if (!res.ok) {
@@ -427,77 +462,28 @@ ipcMain.handle('openai-ocr-answer', async (event, payload) => {
       return { error: 'api_error', detail: text };
     }
     const data = await res.json();
-    return { data };
+    const out = data?.choices?.[0]?.message?.content || '';
+    return { data: { output_text: String(out || '').trim() } };
   } catch (error) {
-    console.error('OpenAI OCR error:', error);
+    console.error('Groq OCR answer error:', error);
     return { error: 'exception', detail: String(error) };
   }
+};
+
+ipcMain.handle('groq-ocr-answer', async (event, payload) => {
+  return handleGroqOcrAnswer(payload);
+});
+
+// Backward compatibility for older renderer builds that still invoke the old channel name.
+ipcMain.handle('openai-ocr-answer', async (event, payload) => {
+  return handleGroqOcrAnswer(payload);
 });
 
 ipcMain.handle('openai-ocr-extract-text', async (event, payload) => {
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) return { error: 'missing_api_key' };
-
-    const model = process.env.OPENAI_VISION_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini';
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    };
-    if (process.env.OPENAI_PROJECT) headers['OpenAI-Project'] = process.env.OPENAI_PROJECT;
-    if (process.env.OPENAI_ORG) headers['OpenAI-Organization'] = process.env.OPENAI_ORG;
-
-    const imageDataUrl = payload?.imageDataUrl;
-    if (!imageDataUrl || typeof imageDataUrl !== 'string') {
-      return { error: 'invalid_payload' };
-    }
-
-    const res = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        model,
-        temperature: 0,
-        max_output_tokens: 2200,
-        input: [
-          {
-            role: 'system',
-            content: [
-              {
-                type: 'input_text',
-                text: 'You are an OCR engine. Extract all visible text exactly from the image. Keep natural line breaks. Return plain text only.',
-              },
-            ],
-          },
-          {
-            role: 'user',
-            content: [
-              { type: 'input_text', text: 'Extract full text from this document image.' },
-              { type: 'input_image', image_url: imageDataUrl },
-            ],
-          },
-        ],
-      }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      return { error: 'api_error', detail: text };
-    }
-    const data = await res.json();
-    let out = data?.output_text || '';
-    if (!out && Array.isArray(data?.output)) {
-      for (const item of data.output) {
-        if (Array.isArray(item?.content)) {
-          for (const c of item.content) {
-            if (c?.type === 'output_text' && c?.text) out += c.text;
-          }
-        }
-      }
-    }
-    return { data: { text: (out || '').trim() } };
+    return { error: 'provider_disabled', detail: 'Vision OCR via OpenAI has been disabled. Use Google Vision or Tesseract fallback.' };
   } catch (error) {
-    console.error('OpenAI OCR extract error:', error);
+    console.error('Vision OCR bridge error:', error);
     return { error: 'exception', detail: String(error) };
   }
 });

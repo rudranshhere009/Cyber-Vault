@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveAuditReportPdf: (defaultName, html) => ipcRenderer.invoke('save-audit-report-pdf', defaultName, html),
   saveThreatLog: (defaultName, payload) => ipcRenderer.invoke('save-threat-log', defaultName, payload),
   saveVaultBackup: (defaultName, payload) => ipcRenderer.invoke('save-vault-backup', defaultName, payload),
+  groqOcrAnswer: (payload) => ipcRenderer.invoke('groq-ocr-answer', payload),
   openaiOcrAnswer: (payload) => ipcRenderer.invoke('openai-ocr-answer', payload),
   openaiOcrExtractText: (payload) => ipcRenderer.invoke('openai-ocr-extract-text', payload),
   googleOcrExtractText: (payload) => ipcRenderer.invoke('google-ocr-extract-text', payload),

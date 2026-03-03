@@ -2,7 +2,7 @@ import Tesseract from 'tesseract.js';
 import React, { useState, useRef, useEffect } from 'react';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import pdfWorker from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
-import { getCasualQaResponse } from './casualQa';
+import { getCasualFallbackResponse, getCasualQaResponse, isFileRelatedQuestion } from './casualQa';
 
 // Set worker source for pdf.js
 	pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
@@ -314,10 +314,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 				if (txt) return txt;
 			}
 		}
-		if (!window.electronAPI?.openaiOcrExtractText) return '';
-		const res = await window.electronAPI.openaiOcrExtractText({ imageDataUrl });
-		if (res?.error) return '';
-		return (res?.data?.text || '').trim();
+		return '';
 	};
 
 	// Extract text from file (OCR for images, direct for text)
@@ -373,7 +370,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 				showNotification('> running.ocr.on.pdf', 'info');
 				const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
 				let mergedPdfText = '';
-				const useVision = Boolean(window.electronAPI?.googleOcrExtractText || window.electronAPI?.openaiOcrExtractText);
+				const useVision = Boolean(window.electronAPI?.googleOcrExtractText);
 				for (let i = 1; i <= pdf.numPages; i++) {
 					showNotification(`> processing.pdf.page.${i}.of.${pdf.numPages}`, 'info');
 					const page = await pdf.getPage(i);
@@ -488,6 +485,17 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 			return;
 		}
 
+		// Route guard: only file-related questions are allowed into OCR/AI path.
+		if (!isFileRelatedQuestion(userInput)) {
+			setTimeout(() => {
+				setMessages((prev) => [
+					...prev,
+					{ sender: 'bot', text: getCasualFallbackResponse(), category: 'casual', casualCategory: 'fallback' },
+				]);
+			}, 180);
+			return;
+		}
+
 		if (!ocrText || !ocrText.trim()) {
 			setTimeout(() => {
 				setMessages((prev) => [...prev, { sender: 'bot', text: 'Please run OCR on a file first so I can answer questions about it.' }]);
@@ -499,42 +507,60 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 		const clippedText = ocrText.length > 12000 ? ocrText.slice(0, 12000) : ocrText;
 		const userPrompt = `Extracted text:\n${clippedText}\n\nQuestion: ${userInput}`;
 
-		if (window.electronAPI?.openaiOcrAnswer) {
+		const aiHandlers = [
+			{ name: 'groq', fn: window.electronAPI?.groqOcrAnswer },
+			{ name: 'legacy', fn: window.electronAPI?.openaiOcrAnswer },
+		].filter((h) => typeof h.fn === 'function');
+		if (aiHandlers.length) {
 			try {
 				setIsThinking(true);
-				const res = await window.electronAPI.openaiOcrAnswer({
-					input: [
-						{ role: 'system', content: [{ type: 'input_text', text: systemPrompt }] },
-						{ role: 'user', content: [{ type: 'input_text', text: userPrompt }] },
-					],
-				});
-				if (res?.error) {
-					if (res.error === 'missing_api_key') throw new Error('OpenAI API key not configured');
-					if (res.error === 'api_error' && res.detail) throw new Error(`API error: ${res.detail}`);
-					throw new Error(res.error);
-				}
-				const data = res?.data;
-				let out = '';
-				if (data?.output_text) out = data.output_text;
-				if (!out && Array.isArray(data?.output)) {
-					for (const item of data.output) {
-						if (Array.isArray(item?.content)) {
-							for (const c of item.content) {
-								if (c?.type === 'output_text' && c?.text) out += c.text;
+				let lastError = null;
+				for (const handler of aiHandlers) {
+					try {
+						const res = await handler.fn({
+							input: [
+								{ role: 'system', content: [{ type: 'input_text', text: systemPrompt }] },
+								{ role: 'user', content: [{ type: 'input_text', text: userPrompt }] },
+							],
+						});
+						if (res?.error) {
+							if (res.error === 'missing_api_key') throw new Error('Groq API key not configured');
+							if (res.error === 'api_error' && res.detail) throw new Error(`API error: ${res.detail}`);
+							throw new Error(res.error);
+						}
+						const data = res?.data;
+						let out = '';
+						if (data?.output_text) out = data.output_text;
+						if (!out && Array.isArray(data?.output)) {
+							for (const item of data.output) {
+								if (Array.isArray(item?.content)) {
+									for (const c of item.content) {
+										if (c?.type === 'output_text' && c?.text) out += c.text;
+									}
+								}
 							}
 						}
+						if (out && out.trim()) {
+							setMessages((prev) => [...prev, { sender: 'bot', text: out.trim(), category: 'ocr' }]);
+							return;
+						}
+					} catch (err) {
+						lastError = err;
+						const msg = String(err?.message || err || '');
+						const missingGroqHandler = /no handler registered for ['"]groq-ocr-answer['"]/i.test(msg);
+						if (handler.name === 'groq' && missingGroqHandler) {
+							continue;
+						}
+						break;
 					}
 				}
-				if (out && out.trim()) {
-					setMessages((prev) => [...prev, { sender: 'bot', text: out.trim(), category: 'ocr' }]);
-					setIsThinking(false);
-					return;
-				}
+				if (lastError) throw lastError;
+				throw new Error('AI returned empty output');
 			} catch (err) {
 				setMessages((prev) => [...prev, { sender: 'bot', text: `AI error: ${err.message}. Falling back to local search.`, category: 'ocr' }]);
 			} finally {
 				setIsThinking(false);
-			}
+				}
 		}
 		const wantsBullets = /points|bullet|bullets|list|in points/i.test(userInput);
 		const wantOnly = /only|just|specifically|particular|section/i.test(userInput);

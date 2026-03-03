@@ -97,7 +97,7 @@ CyberVault currently provides:
 - PDF text extraction via pdf.js and OCR fallback for scanned PDFs.
 - Text file extraction.
 - File Q&A assistant with local heuristics.
-- Optional OpenAI-backed answer generation over extracted text.
+- Optional Groq-backed answer generation over extracted text.
 
 ### UX and profile features
 
@@ -119,7 +119,7 @@ CyberVault currently provides:
 | Encrypted backup export | Implemented | `.cybvlt` output |
 | Backup restore | Implemented | Decrypt + restore metadata/payload mapping |
 | OCR extraction | Implemented | Tesseract + pdf.js integration |
-| AI Q&A over OCR text | Implemented (optional) | Requires OpenAI env vars |
+| AI Q&A over OCR text | Implemented (optional) | Requires Groq env vars |
 | Audit report JSON/PDF export | Implemented | Electron save dialog + PDF print |
 | Threat monitor + export | Implemented | Risk score + threat log |
 | Cross-platform packaging | Partial | Windows target configured in `electron-builder` |
@@ -138,7 +138,7 @@ Important current behavior:
 
 - WebAuthn credential store persistence exists, but at-rest hardening for that store is a known improvement area.
 - Face models are currently loaded from external URLs at runtime.
-- Optional AI answering sends extracted text context to OpenAI only when configured.
+- Optional AI answering sends extracted text context to Groq only when configured.
 
 ## Tech Stack
 
@@ -192,7 +192,7 @@ High-level layering:
 - Read/write vault index and app state.
 - Read/write/delete encrypted blob files.
 - Save audit/threat/backup exports.
-- Optional OpenAI API relay for OCR assistant answers.
+- Optional Groq API relay for OCR assistant answers.
 
 ## Data Storage Layout
 
@@ -284,7 +284,7 @@ Typical files created via IPC:
 ### Question answering behavior
 
 - Local rule-based/section extraction fallback is available.
-- If OpenAI env vars are set, assistant can request model-generated answers.
+- If Groq env vars are set, assistant can request model-generated answers.
 
 ## Mission Mode
 
@@ -370,10 +370,12 @@ Builds renderer and generates installer/distributables.
 
 Used by optional OCR assistant AI answering (`electron/main.js`):
 
-- `OPENAI_API_KEY`
-- `OPENAI_MODEL` (default `gpt-4o-mini`)
-- `OPENAI_PROJECT` (optional)
-- `OPENAI_ORG` (optional)
+- `GROQ_API_KEY`
+- `GROQ_MODEL` (default `llama-3.3-70b-versatile`)
+
+Optional OCR vision provider:
+
+- `GOOGLE_VISION_API_KEY`
 
 Optional dev variable:
 
@@ -434,9 +436,9 @@ Cyber-Vault-main/
 
 ### AI answers unavailable
 
-- Configure `OPENAI_API_KEY`.
+- Configure `GROQ_API_KEY`.
 - Check network availability.
-- Validate `OPENAI_MODEL` value.
+- Validate `GROQ_MODEL` value.
 
 ### Backup restore fails
 

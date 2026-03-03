@@ -93,7 +93,11 @@ const CASUAL_INTENTS = [
 		response: 'I help you extract text from files and answer questions from extracted content.',
 		questions: [
 			'what do you do',
+			'what you do',
+			'what u do',
 			'what can you do',
+			'what you can do',
+			'what u can do',
 			'how can you help',
 			'how do you help',
 			'what is your purpose',
@@ -439,7 +443,7 @@ const CASUAL_PATTERN_HANDLERS = [
 	},
 	{
 		category: 'bot_purpose',
-		test: (n) => /\bwhat can you do\b/.test(n) || /\bwhat do you do\b/.test(n),
+		test: (n) => /\bwhat can you do\b/.test(n) || /\bwhat do you do\b/.test(n) || /\bwhat you do\b/.test(n) || /\bwhat u do\b/.test(n) || /\bwhat you can do\b/.test(n) || /\bwhat u can do\b/.test(n),
 		response: 'I help with OCR extraction and document-based Q&A.',
 	},
 	{
@@ -490,6 +494,34 @@ const CASUAL_PATTERN_HANDLERS = [
 ];
 
 export const CASUAL_QUESTION_COUNT = CASUAL_INTENTS.reduce((acc, intent) => acc + intent.questions.length, 0);
+
+const FILE_RELATED_PATTERNS = [
+	/\b(file|document|doc|pdf|page|pages|image|ocr|extract|extracted|extraction|text|content|context|section|line|paragraph|resume|cv)\b/,
+	/\b(selected file|this file|that file|the file|this document|that document|the document|this pdf|that pdf|the pdf|this resume|that resume|the resume)\b/,
+	/\b(in|from|of|about|inside)\s+(this|that|the)\s+(file|document|pdf|resume|cv|text|content)\b/,
+	/\b(summarize|summary|explain|find|show|list|give|tell)\b.*\b(file|document|pdf|resume|cv|text|content|section|page)\b/,
+	/\b(education|experience|skills|certification|certifications|contact)\b.*\b(file|document|resume|cv|text|content)\b/,
+	/\bwhat is inside\b/,
+];
+
+const FILE_RELATED_SECTION_ONLY = /\b(education|experience|skills|certification|certifications|contact|email|phone|address|qualification|internship|project)\b/;
+
+const CASUAL_BOT_ONLY_HINTS = /\b(you|your|bot|assistant|app)\b/;
+
+export const isFileRelatedQuestion = (rawInput) => {
+	const normalized = normalizeInput(rawInput);
+	if (!normalized) return false;
+
+	if (FILE_RELATED_PATTERNS.some((r) => r.test(normalized))) return true;
+
+	// Treat section-style asks as file-related unless clearly about the bot/app itself.
+	if (FILE_RELATED_SECTION_ONLY.test(normalized) && !CASUAL_BOT_ONLY_HINTS.test(normalized)) return true;
+
+	return false;
+};
+
+export const getCasualFallbackResponse = () =>
+	'I can chat casually anytime. For document AI, ask something about the selected file, like "summarize this file" or "show skills from this resume".';
 
 export const getCasualQaResponse = (rawInput) => {
 	const normalized = normalizeInput(rawInput);
