@@ -232,7 +232,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 	const [ocrType, setOcrType] = useState('all');
 	const messagesEndRef = useRef(null);
 	const recognitionRef = useRef(null);
-	const decryptedFileCacheRef = useRef({ fileId: null, buffer: null });
+	const decryptedFileCacheRef = useRef({ fileId: null, base64: null });
 
 	const filteredFiles = React.useMemo(() => {
 		const q = ocrQuery.trim().toLowerCase();
@@ -262,7 +262,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 			setOcrText('');
 			setOcrLinks([]);
 			setExtractError('');
-			decryptedFileCacheRef.current = { fileId: null, buffer: null };
+			decryptedFileCacheRef.current = { fileId: null, base64: null };
 			setMessages([{ sender: 'bot', text: 'File unselected. Pick another file to extract text.' }]);
 			return;
 		}
@@ -342,7 +342,12 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 			if (!buffer) {
 				throw new Error('Could not decrypt file.');
 			}
-			decryptedFileCacheRef.current = { fileId: file.id, buffer };
+			let cachedBase64 = null;
+			try {
+				// Snapshot decrypted bytes now; avoids later "detached ArrayBuffer" failures.
+				cachedBase64 = arrayBufferToBase64(buffer.slice(0));
+			} catch {}
+			decryptedFileCacheRef.current = { fileId: file.id, base64: cachedBase64 };
 
 			// 1. Try to decode as text
 			if (file.type && file.type.startsWith('text/')) {
@@ -499,20 +504,21 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 			setIsThinking(true);
 			let filePayload = null;
 			if (currentFile) {
-				let decrypted = null;
-				if (decryptedFileCacheRef.current.fileId === currentFile.id && decryptedFileCacheRef.current.buffer) {
-					decrypted = decryptedFileCacheRef.current.buffer;
+				let base64 = null;
+				if (decryptedFileCacheRef.current.fileId === currentFile.id && decryptedFileCacheRef.current.base64) {
+					base64 = decryptedFileCacheRef.current.base64;
 				} else {
-					decrypted = await getDecryptedFileBuffer(currentFile, { idbGet, deriveQuantumKey, generateChecksum, ensureMasterPassword, showNotification });
+					const decrypted = await getDecryptedFileBuffer(currentFile, { idbGet, deriveQuantumKey, generateChecksum, ensureMasterPassword, showNotification });
 					if (decrypted) {
-						decryptedFileCacheRef.current = { fileId: currentFile.id, buffer: decrypted };
+						base64 = arrayBufferToBase64(decrypted);
+						decryptedFileCacheRef.current = { fileId: currentFile.id, base64 };
 					}
 				}
-				if (decrypted) {
+				if (base64) {
 					filePayload = {
 						name: currentFile.name || 'document.bin',
 						type: currentFile.type || 'application/octet-stream',
-						base64: arrayBufferToBase64(decrypted),
+						base64,
 					};
 				}
 			}
@@ -577,7 +583,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 			setCurrentFile(null);
 			setOcrText('');
 			setOcrLinks([]);
-			decryptedFileCacheRef.current = { fileId: null, buffer: null };
+			decryptedFileCacheRef.current = { fileId: null, base64: null };
 			setIsChatOpen(false);
 			setInput('');
 			setExtractError('');
