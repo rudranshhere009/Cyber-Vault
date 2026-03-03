@@ -2,6 +2,7 @@ import Tesseract from 'tesseract.js';
 import React, { useState, useRef, useEffect } from 'react';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import pdfWorker from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
+import { getCasualQaResponse, isFileRelatedQuestion } from './casualQa';
 
 // Set worker source for pdf.js
 	pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
@@ -225,6 +226,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 	const [extractError, setExtractError] = useState('');
 	const [isThinking, setIsThinking] = useState(false);
 	const [isListening, setIsListening] = useState(false);
+	const [useFileContext, setUseFileContext] = useState(false);
 	const [ocrQuery, setOcrQuery] = useState('');
 	const [ocrLinks, setOcrLinks] = useState([]);
 	const [isChatOpen, setIsChatOpen] = useState(false);
@@ -232,7 +234,6 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 	const [ocrType, setOcrType] = useState('all');
 	const messagesEndRef = useRef(null);
 	const recognitionRef = useRef(null);
-	const decryptedFileCacheRef = useRef({ fileId: null, base64: null });
 
 	const filteredFiles = React.useMemo(() => {
 		const q = ocrQuery.trim().toLowerCase();
@@ -262,21 +263,10 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 			setOcrText('');
 			setOcrLinks([]);
 			setExtractError('');
-			decryptedFileCacheRef.current = { fileId: null, base64: null };
 			setMessages([{ sender: 'bot', text: 'File unselected. Pick another file to extract text.' }]);
 			return;
 		}
 		await selectOcrFile(file);
-	};
-
-	const arrayBufferToBase64 = (buffer) => {
-		const bytes = new Uint8Array(buffer);
-		const chunkSize = 0x8000;
-		let binary = '';
-		for (let i = 0; i < bytes.length; i += chunkSize) {
-			binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-		}
-		return btoa(binary);
 	};
 
 	// Voice input (speech-to-text)
@@ -342,12 +332,6 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 			if (!buffer) {
 				throw new Error('Could not decrypt file.');
 			}
-			let cachedBase64 = null;
-			try {
-				// Snapshot decrypted bytes now; avoids later "detached ArrayBuffer" failures.
-				cachedBase64 = arrayBufferToBase64(buffer.slice(0));
-			} catch {}
-			decryptedFileCacheRef.current = { fileId: file.id, base64: cachedBase64 };
 
 			// 1. Try to decode as text
 			if (file.type && file.type.startsWith('text/')) {
@@ -482,14 +466,39 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 	};
 
 
-	// AI-first Q&A: all user questions are answered by model; file bytes are attached when selected.
+	// Hybrid routing:
+	// 1) Common casual questions -> local response bank
+	// 2) Other questions -> AI
+	// 3) File-context questions -> AI with extracted text context
 	const handleSend = async () => {
 		const userInput = input.trim();
 		if (!userInput) return;
 		const userMessage = { sender: 'user', text: userInput };
 		setMessages((prev) => [...prev, userMessage]);
 		setInput('');
-		const userPrompt = userInput;
+		const recentConversation = [...messages.slice(-6), userMessage]
+			.map((msg) => {
+				const role = msg.sender === 'user' ? 'User' : 'Assistant';
+				const text = String(msg.text || '').replace(/\s+/g, ' ').trim().slice(0, 220);
+				return text ? `${role}: ${text}` : '';
+			})
+			.filter(Boolean)
+			.join('\n');
+
+		if (!useFileContext) {
+			const casual = getCasualQaResponse(userInput);
+			if (casual) {
+				setTimeout(() => {
+					setMessages((prev) => [
+						...prev,
+						{ sender: 'bot', text: casual.response, category: 'casual', casualCategory: casual.category },
+					]);
+				}, 180);
+				return;
+			}
+		}
+
+		const fileQuery = useFileContext || isFileRelatedQuestion(userInput);
 
 		const aiHandlers = [
 			{ name: 'groq', fn: window.electronAPI?.groqOcrAnswer },
@@ -502,89 +511,86 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 
 		try {
 			setIsThinking(true);
-			let filePayload = null;
-			if (currentFile) {
-				let base64 = null;
-				if (decryptedFileCacheRef.current.fileId === currentFile.id && decryptedFileCacheRef.current.base64) {
-					base64 = decryptedFileCacheRef.current.base64;
-				} else {
-					const decrypted = await getDecryptedFileBuffer(currentFile, { idbGet, deriveQuantumKey, generateChecksum, ensureMasterPassword, showNotification });
-					if (decrypted) {
-						base64 = arrayBufferToBase64(decrypted);
-						decryptedFileCacheRef.current = { fileId: currentFile.id, base64 };
-					}
-				}
-				if (base64) {
-					filePayload = {
-						name: currentFile.name || 'document.bin',
-						type: currentFile.type || 'application/octet-stream',
-						base64,
-					};
-				}
-			}
 
-			try {
+			const invokeAiWithFallback = async (reqPayload) => {
 				let lastError = null;
 				for (const handler of aiHandlers) {
 					try {
-						const res = await handler.fn({
-							question: userPrompt,
-							file: filePayload,
-						});
+						const res = await handler.fn(reqPayload);
 						if (res?.error) {
 							if (res.error === 'missing_api_key') throw new Error('Groq API key not configured');
 							if (res.error === 'api_error' && res.detail) throw new Error(`API error: ${res.detail}`);
+							if (res.detail) throw new Error(`${res.error}: ${res.detail}`);
 							throw new Error(res.error);
 						}
-						const data = res?.data;
-						let out = '';
-						if (data?.output_text) out = data.output_text;
-						if (!out && Array.isArray(data?.output)) {
-							for (const item of data.output) {
-								if (Array.isArray(item?.content)) {
-									for (const c of item.content) {
-										if (c?.type === 'output_text' && c?.text) out += c.text;
-									}
-								}
-							}
-						}
-						if (out && out.trim()) {
-							setMessages((prev) => [...prev, { sender: 'bot', text: out.trim(), category: 'ai' }]);
-							return;
-						}
+						return res;
 					} catch (err) {
 						lastError = err;
 						const msg = String(err?.message || err || '');
 						const missingGroqHandler = /no handler registered/i.test(msg) && /groq-ocr-answer/i.test(msg);
-						if (handler.name === 'groq' && missingGroqHandler) {
-							continue;
-						}
+						if (handler.name === 'groq' && missingGroqHandler) continue;
 						break;
 					}
 				}
 				if (lastError) throw lastError;
-				throw new Error('AI returned empty output');
-			} catch (err) {
-				setMessages((prev) => [...prev, { sender: 'bot', text: `AI error: ${err.message}.`, category: 'ai' }]);
-			} finally {
-				setIsThinking(false);
+				throw new Error('AI handler invocation failed');
+			};
+
+			let aiQuestion = userInput;
+			if (fileQuery) {
+				if (!currentFile) {
+					setMessages((prev) => [...prev, { sender: 'bot', text: 'Select a file first for file-based questions.', category: 'ocr' }]);
+					return;
+				}
+				if (!ocrText || !ocrText.trim()) {
+					setMessages((prev) => [...prev, { sender: 'bot', text: 'Please run OCR on the selected file first.', category: 'ocr' }]);
+					return;
+				}
+				const clippedText = ocrText.length > 12000 ? ocrText.slice(0, 12000) : ocrText;
+				aiQuestion = `You are answering from the selected file context. Use recent chat context for follow-up questions like "which one", "that", or "he".
+Recent chat:
+${recentConversation || 'User: ' + userInput}
+
+Use only this extracted text from the selected file as context.
+Extracted text:
+${clippedText}
+
+Question: ${userInput}`;
 			}
+
+			const res = await invokeAiWithFallback({ question: aiQuestion });
+
+			const data = res?.data;
+			let out = '';
+			if (data?.output_text) out = data.output_text;
+			if (!out && Array.isArray(data?.output)) {
+				for (const item of data.output) {
+					if (Array.isArray(item?.content)) {
+						for (const c of item.content) {
+							if (c?.type === 'output_text' && c?.text) out += c.text;
+						}
+					}
+				}
+			}
+			if (!out || !out.trim()) throw new Error('AI returned empty output');
+			setMessages((prev) => [...prev, { sender: 'bot', text: out.trim(), category: fileQuery ? 'ocr' : 'ai' }]);
 		} catch (err) {
-			setIsThinking(false);
 			setMessages((prev) => [...prev, { sender: 'bot', text: `AI error: ${err.message}.`, category: 'ai' }]);
+		} finally {
+			setIsThinking(false);
 		}
 	};
 
 	useEffect(() => {
 		if (open) {
 			setMessages([
-				{ sender: 'bot', text: 'Welcome to the OCR section. Ask anything. If a file is selected, your question is answered using the file directly.' }
+				{ sender: 'bot', text: 'Welcome to the OCR section. Casual chat is local. For document questions, select a file and run OCR.' }
 			]);
 			setCurrentFile(null);
 			setOcrText('');
 			setOcrLinks([]);
-			decryptedFileCacheRef.current = { fileId: null, base64: null };
 			setIsChatOpen(false);
+			setUseFileContext(false);
 			setInput('');
 			setExtractError('');
 		}
@@ -796,40 +802,46 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 								</div>
 								<div className="ocr-input-row">
 									<textarea
-										className="form-input"
-										placeholder={currentFile ? 'Ask anything about this file...' : 'Ask anything... (select a file for file-grounded answers)'}
+										className="form-input ocr-chat-input"
+										placeholder={
+											useFileContext
+												? (currentFile ? 'Context mode ON: ask from selected file...' : 'Context mode ON: select a file and run OCR first...')
+												: (currentFile ? 'Ask anything about this file...' : 'Ask anything... (select a file for file-grounded answers)')
+										}
 										value={input}
 										onChange={e => setInput(e.target.value)}
 										onKeyPress={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
 										rows="3"
 										disabled={isExtracting}
 									/>
-									<button
-										onClick={isListening ? stopListening : startListening}
-										className="cyber-btn btn-primary"
-										title={isListening ? 'Stop voice input' : 'Speak your question'}
-										disabled={isThinking}
-									>
-										{isListening ? (
-											<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-												<rect x="6" y="6" width="12" height="12" rx="2"></rect>
-											</svg>
-										) : (
-											<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-												<path d="M12 1v22"></path>
-												<path d="M8 5a4 4 0 0 1 8 0v6a4 4 0 0 1-8 0z"></path>
-												<path d="M5 10a7 7 0 0 0 14 0"></path>
-											</svg>
-										)}
-									</button>
-									<button
-										onClick={handleSend}
-										className="cyber-btn btn-secondary"
-										disabled={isExtracting || !input.trim() || isThinking}
-										title="Send question"
-									>
-										{isThinking ? 'Thinking...' : 'Send'}
-									</button>
+									<div className="ocr-chat-actions">
+										<button
+											onClick={isListening ? stopListening : startListening}
+											className="cyber-btn btn-primary ocr-voice-btn"
+											title={isListening ? 'Stop voice input' : 'Speak your question'}
+											disabled={isThinking}
+										>
+											{isListening ? 'Stop Voice' : 'Voice'}
+										</button>
+										<div className="ocr-chat-actions-row">
+											<button
+												onClick={() => setUseFileContext((prev) => !prev)}
+												className={`cyber-btn ${useFileContext ? 'btn-primary' : 'btn-secondary'} ocr-context-btn`}
+												title="Toggle file context mode"
+												disabled={isExtracting || isThinking}
+											>
+												{useFileContext ? 'Context: On' : 'Context: Off'}
+											</button>
+											<button
+												onClick={handleSend}
+												className="cyber-btn btn-secondary ocr-send-btn"
+												disabled={isExtracting || !input.trim() || isThinking}
+												title="Send question"
+											>
+												{isThinking ? 'Thinking...' : 'Send'}
+											</button>
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>
