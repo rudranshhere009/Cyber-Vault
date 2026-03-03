@@ -2,6 +2,7 @@ import Tesseract from 'tesseract.js';
 import React, { useState, useRef, useEffect } from 'react';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import pdfWorker from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
+import { getCasualQaResponse } from './casualQa';
 
 // Set worker source for pdf.js
 	pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
@@ -216,7 +217,7 @@ const extractDocxTextAndLinks = async (arrayBuffer) => {
 	return { text: merged, links: Array.from(links) };
 };
 
-const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, generateChecksum, ensureMasterPassword, showNotification, isDemo = false }) => {
+const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, generateChecksum, ensureMasterPassword, showNotification }) => {
 	const [messages, setMessages] = useState([]);
 	const [input, setInput] = useState('');
 	const [currentFile, setCurrentFile] = useState(null);
@@ -232,10 +233,6 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 	const [ocrType, setOcrType] = useState('all');
 	const messagesEndRef = useRef(null);
 	const recognitionRef = useRef(null);
-	const showDemoChatDenied = () => {
-		showNotification('> access.denied.login.to.use.ai.chatbot.with.ocr', 'error');
-		setMessages((prev) => [...prev, { sender: 'bot', text: 'AI chatbot access is disabled in Demo Mode. Log in to use OCR + AI chat.' }]);
-	};
 
 	const filteredFiles = React.useMemo(() => {
 		const q = ocrQuery.trim().toLowerCase();
@@ -273,10 +270,6 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 
 	// Voice input (speech-to-text)
 	const startListening = () => {
-		if (isDemo) {
-			showDemoChatDenied();
-			return;
-		}
 		if (!('webkitSpeechRecognition' in window)) {
 			alert('Speech recognition not supported in this browser.');
 			return;
@@ -477,15 +470,24 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 
 	// Q&A logic: Thor answers based on ocrText
 	const handleSend = async () => {
-		if (!input.trim()) return;
-		if (isDemo) {
-			showDemoChatDenied();
-			setInput('');
-			return;
-		}
-		const userMessage = { sender: 'user', text: input };
+		const userInput = input.trim();
+		if (!userInput) return;
+		const userMessage = { sender: 'user', text: userInput };
 		setMessages((prev) => [...prev, userMessage]);
 		setInput('');
+
+		// Sub-route 1: casual/simple chat (independent of OCR text)
+		const casual = getCasualQaResponse(userInput);
+		if (casual) {
+			setTimeout(() => {
+				setMessages((prev) => [
+					...prev,
+					{ sender: 'bot', text: casual.response, category: 'casual', casualCategory: casual.category },
+				]);
+			}, 180);
+			return;
+		}
+
 		if (!ocrText || !ocrText.trim()) {
 			setTimeout(() => {
 				setMessages((prev) => [...prev, { sender: 'bot', text: 'Please run OCR on a file first so I can answer questions about it.' }]);
@@ -495,7 +497,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 
 		const systemPrompt = `You are CyberVault OCR assistant. Answer only using the provided extracted text. If the user asks for a specific section, return only that section. If the user asks for points/bullets, return bullet points. If you cannot find the answer, say so clearly. Keep answers concise and factual.`;
 		const clippedText = ocrText.length > 12000 ? ocrText.slice(0, 12000) : ocrText;
-		const userPrompt = `Extracted text:\n${clippedText}\n\nQuestion: ${input}`;
+		const userPrompt = `Extracted text:\n${clippedText}\n\nQuestion: ${userInput}`;
 
 		if (window.electronAPI?.openaiOcrAnswer) {
 			try {
@@ -524,20 +526,20 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 					}
 				}
 				if (out && out.trim()) {
-					setMessages((prev) => [...prev, { sender: 'bot', text: out.trim() }]);
+					setMessages((prev) => [...prev, { sender: 'bot', text: out.trim(), category: 'ocr' }]);
 					setIsThinking(false);
 					return;
 				}
 			} catch (err) {
-				setMessages((prev) => [...prev, { sender: 'bot', text: `AI error: ${err.message}. Falling back to local search.` }]);
+				setMessages((prev) => [...prev, { sender: 'bot', text: `AI error: ${err.message}. Falling back to local search.`, category: 'ocr' }]);
 			} finally {
 				setIsThinking(false);
 			}
 		}
-		const wantsBullets = /points|bullet|bullets|list|in points/i.test(input);
-		const wantOnly = /only|just|specifically|particular|section/i.test(input);
+		const wantsBullets = /points|bullet|bullets|list|in points/i.test(userInput);
+		const wantOnly = /only|just|specifically|particular|section/i.test(userInput);
 		const sectionKey = (() => {
-			const q = input.toLowerCase();
+			const q = userInput.toLowerCase();
 			if (q.match(/education|qualification|school|college|degree/)) return 'education';
 			if (q.match(/experience|work|employment|internship|project/)) return 'experience';
 			if (q.match(/skills|tech|stack|tools|languages/)) return 'skills';
@@ -547,7 +549,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 		})();
 		const sectionKeys = (() => {
 			const keys = [];
-			const q = input.toLowerCase();
+			const q = userInput.toLowerCase();
 			if (q.match(/education|qualification|school|college|degree/)) keys.push('education');
 			if (q.match(/experience|work|employment|internship|project/)) keys.push('experience');
 			if (q.match(/skills|tech|stack|tools|languages/)) keys.push('skills');
@@ -608,7 +610,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 
 		// Improved Q&A logic
 		let answer = '';
-		const lowerInput = input.toLowerCase();
+		const lowerInput = userInput.toLowerCase();
 		if (lowerInput.includes('summary') || lowerInput.includes('summarize') || lowerInput.includes('context') || lowerInput.includes('what is inside') || lowerInput.includes('about the file')) {
 			// Try to generate a factual summary
 			if (!ocrText.trim()) {
@@ -653,7 +655,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 				.toLowerCase();
 			const lines = normalized.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 			const rawLines = ocrText.split(/\r?\n/).map(l => l.trim());
-			const query = input.toLowerCase().replace(/[^\w\s]/g, ' ').split(/\s+/).filter(Boolean);
+			const query = userInput.toLowerCase().replace(/[^\w\s]/g, ' ').split(/\s+/).filter(Boolean);
 			const scoreLine = (line) => {
 				let score = 0;
 				for (const term of query) {
@@ -676,7 +678,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 			}
 		}
 		setTimeout(() => {
-			setMessages((prev) => [...prev, { sender: 'bot', text: answer }]);
+			setMessages((prev) => [...prev, { sender: 'bot', text: answer, category: 'ocr' }]);
 		}, 500);
 	};
 
@@ -733,7 +735,6 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 					<div className="ocr-header-actions">
 						<button className="cyber-btn btn-secondary" onClick={() => {
 							setIsChatOpen(true);
-							if (isDemo) showDemoChatDenied();
 						}}>
 							AI Chatbot
 						</button>
@@ -874,14 +875,14 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 								<span className="ocr-icon">AI</span>
 								<div>
 									<div className="ocr-title-text">Neural OCR Chatbot</div>
-									<div className="ocr-subtitle">{isDemo ? 'Demo mode: login required for AI chat' : 'Ask questions about extracted content'}</div>
+									<div className="ocr-subtitle">Ask questions about extracted content</div>
 								</div>
 							</div>
 							<button className="cyber-btn btn-danger" onClick={() => setIsChatOpen(false)}>Close</button>
 						</div>
 						<div className="ocr-chatbot-body">
 							<div className="ocr-panel ocr-chat">
-								<div className="ocr-panel-title">{isDemo ? 'Ask the Vault (Login Required)' : 'Ask the Vault'}</div>
+								<div className="ocr-panel-title">Ask the Vault</div>
 								<div className="ocr-messages">
 									{messages.map((msg, index) => (
 										<div key={index} className={`ocr-msg ${msg.sender === 'user' ? 'user' : 'bot'}`}>
@@ -902,22 +903,18 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 								<div className="ocr-input-row">
 									<textarea
 										className="form-input"
-										placeholder={
-											isDemo
-												? 'Demo mode: OCR extraction only. Log in for AI chat.'
-												: (currentFile ? 'Ask about the selected file...' : 'Select a file to start...')
-										}
+										placeholder={currentFile ? 'Ask about the selected file...' : 'Select a file to start...'}
 										value={input}
 										onChange={e => setInput(e.target.value)}
 										onKeyPress={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
 										rows="3"
-										disabled={!currentFile || isExtracting || isDemo}
+										disabled={!currentFile || isExtracting}
 									/>
 									<button
 										onClick={isListening ? stopListening : startListening}
 										className="cyber-btn btn-primary"
 										title={isListening ? 'Stop voice input' : 'Speak your question'}
-										disabled={isThinking || isDemo}
+										disabled={isThinking}
 									>
 										{isListening ? (
 											<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
@@ -934,7 +931,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 									<button
 										onClick={handleSend}
 										className="cyber-btn btn-secondary"
-										disabled={!currentFile || isExtracting || !input.trim() || isThinking || isDemo}
+										disabled={!currentFile || isExtracting || !input.trim() || isThinking}
 										title="Send question"
 									>
 										{isThinking ? 'Thinking...' : 'Send'}

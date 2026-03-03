@@ -4644,7 +4644,6 @@ function App() {
             generateChecksum={generateChecksum}
             ensureMasterPassword={ensureMasterPassword}
             showNotification={showNotification}
-            isDemo={!!session?.demo}
           />
         </Suspense>
       )}
