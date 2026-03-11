@@ -1923,6 +1923,41 @@ body.theme-night .file-context-menu button:hover { background: rgba(51, 65, 85, 
     grid-template-columns: 1fr !important;
   }
 
+  .pulse-deck {
+    justify-items: stretch !important;
+    text-align: center !important;
+  }
+
+  .pulse-left,
+  .pulse-right {
+    width: 100% !important;
+    justify-items: stretch !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  .pulse-wave {
+    width: 100%;
+  }
+
+  .pulse-ring {
+    justify-self: center !important;
+    margin: 0 auto !important;
+  }
+
+  .pulse-kpis {
+    width: 100%;
+  }
+
+  .pulse-kpi {
+    width: 100% !important;
+    text-align: center !important;
+  }
+
+  .pulse-legend {
+    text-align: center !important;
+  }
+
   .files-grid {
     grid-template-columns: 1fr !important;
     gap: 10px !important;
