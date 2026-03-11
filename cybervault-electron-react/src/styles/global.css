@@ -1845,11 +1845,17 @@ body.theme-night .file-context-menu button:hover { background: rgba(51, 65, 85, 
   .header-top {
     flex-direction: column !important;
     align-items: stretch !important;
+    position: relative !important;
+    padding-right: 0 !important;
     gap: 12px !important;
   }
 
   .brand-title {
     font-size: 24px !important;
+  }
+
+  .brand-block {
+    padding-right: 58px !important;
   }
 
   .header-actions {
@@ -1858,16 +1864,30 @@ body.theme-night .file-context-menu button:hover { background: rgba(51, 65, 85, 
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 8px !important;
+    margin-top: 6px !important;
   }
 
-  .header-actions .cyber-btn,
-  .header-actions .logout-btn {
+  .header-actions .cyber-btn {
     justify-content: center !important;
     width: 100% !important;
   }
 
   .header-actions .profile-badge {
-    align-self: center !important;
+    position: absolute !important;
+    top: 0 !important;
+    right: 0 !important;
+    align-self: auto !important;
+    order: 0 !important;
+  }
+
+  .header-actions .cyber-btn {
+    order: 1 !important;
+  }
+
+  .header-actions .logout-btn {
+    order: 2 !important;
+    justify-content: center !important;
+    width: 100% !important;
   }
 
   .main-grid,
@@ -1974,9 +1994,6 @@ body.theme-night .file-context-menu button:hover { background: rgba(51, 65, 85, 
     font-size: 24px !important;
   }
 
-  .header-actions .profile-badge {
-    align-self: center !important;
-  }
 
   .menu-item,
   .sidebar-action,
