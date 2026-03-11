@@ -1854,14 +1854,27 @@ body.theme-night .file-context-menu button:hover { background: rgba(51, 65, 85, 
 
   .header-actions {
     width: 100% !important;
-    flex-wrap: wrap !important;
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    align-items: center !important;
     gap: 8px !important;
   }
 
-  .header-actions .cyber-btn,
-  .header-actions .logout-btn {
-    flex: 1 1 calc(50% - 8px) !important;
+  .header-actions .cyber-btn {
+    grid-column: 1 / 2 !important;
     justify-content: center !important;
+    width: 100% !important;
+  }
+
+  .header-actions .profile-badge {
+    grid-column: 2 / 3 !important;
+    justify-self: end !important;
+  }
+
+  .header-actions .logout-btn {
+    grid-column: 1 / -1 !important;
+    justify-content: center !important;
+    width: 100% !important;
   }
 
   .main-grid,
@@ -1879,6 +1892,8 @@ body.theme-night .file-context-menu button:hover { background: rgba(51, 65, 85, 
 
   .main-content {
     order: 1 !important;
+    padding: 16px !important;
+    border-radius: 14px !important;
   }
 
   .upload-zone {
@@ -1899,6 +1914,7 @@ body.theme-night .file-context-menu button:hover { background: rgba(51, 65, 85, 
     grid-template-columns: 1fr !important;
     gap: 10px !important;
     padding-right: 0 !important;
+    overflow: visible !important;
   }
 
   .file-card {
@@ -1924,6 +1940,34 @@ body.theme-night .file-context-menu button:hover { background: rgba(51, 65, 85, 
     max-width: 96vw !important;
   }
 
+  .header-search-row .cyber-btn {
+    width: 100% !important;
+  }
+
+  .header-search {
+    min-width: 0 !important;
+  }
+
+  .demo-session-pill {
+    max-width: 100% !important;
+    white-space: normal !important;
+    flex-wrap: wrap !important;
+  }
+
+  .sidebar > div {
+    overflow: visible !important;
+  }
+
+  .empty-state {
+    padding: 32px 16px !important;
+  }
+
+  .empty-state h3,
+  .empty-state p {
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+
   .profile-grid,
   .recovery-grid,
   .export-options,
@@ -1937,9 +1981,18 @@ body.theme-night .file-context-menu button:hover { background: rgba(51, 65, 85, 
     font-size: 24px !important;
   }
 
+  .header-actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .header-actions .profile-badge {
+    grid-column: 1 / -1 !important;
+    justify-self: start !important;
+  }
+
   .header-actions .cyber-btn,
   .header-actions .logout-btn {
-    flex: 1 1 100% !important;
+    grid-column: 1 / -1 !important;
   }
 
   .menu-item,
@@ -1953,6 +2006,34 @@ body.theme-night .file-context-menu button:hover { background: rgba(51, 65, 85, 
   .ocr-title-text,
   .profile-title {
     font-size: 16px !important;
+  }
+
+  .container {
+    padding: 8px !important;
+  }
+
+  .header {
+    padding: 12px !important;
+  }
+
+  .greeting-title {
+    font-size: 16px !important;
+  }
+
+  .greeting-title-row {
+    flex-wrap: wrap !important;
+  }
+
+  .empty-state {
+    padding: 24px 12px !important;
+  }
+
+  .empty-state h3 {
+    font-size: 18px !important;
+  }
+
+  .empty-state p {
+    font-size: 12px !important;
   }
 }
 
