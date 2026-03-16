@@ -1,10 +1,14 @@
 import { app, BrowserWindow, shell, ipcMain, dialog, session } from 'electron';
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initCyberVaultDb, UserModel, LoginEventModel, FileOwnershipModel, getDbInsights } from './db.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load env files from app root regardless of process cwd.
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+dotenv.config({ path: path.join(__dirname, '..', '.env.local'), override: true });
 
 const isDev = !app.isPackaged; // 👈 safer check
 
@@ -398,106 +402,225 @@ ipcMain.handle('save-vault-backup', async (event, defaultName, payload) => {
   }
 });
 
-ipcMain.handle('openai-ocr-answer', async (event, payload) => {
+const aiSessionStore = new Map();
+const MAX_AI_SESSIONS = 100;
+
+const handleGroqOcrAnswer = async (payload) => {
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return { error: 'missing_api_key' };
-    }
-    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) return { error: 'missing_api_key' };
+
+    const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
     const headers = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
     };
-    if (process.env.OPENAI_PROJECT) headers['OpenAI-Project'] = process.env.OPENAI_PROJECT;
-    if (process.env.OPENAI_ORG) headers['OpenAI-Organization'] = process.env.OPENAI_ORG;
 
-    const res = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        model,
-        input: payload.input,
-        temperature: 0.2,
-        max_output_tokens: 500,
-      }),
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      return { error: 'api_error', detail: text };
+    const flattenContentToText = (content) => {
+      if (typeof content === 'string') return content;
+      if (Array.isArray(content)) {
+        return content
+          .map((part) => {
+            if (!part) return '';
+            if (typeof part === 'string') return part;
+            if (typeof part?.text === 'string') return part.text;
+            return '';
+          })
+          .filter(Boolean)
+          .join('\n');
+      }
+      if (content && typeof content?.text === 'string') return content.text;
+      return '';
+    };
+
+    const normalizeMessages = (rawInput) => {
+      if (!rawInput) return [];
+      if (!Array.isArray(rawInput)) {
+        const text = flattenContentToText(rawInput);
+        return text ? [{ role: 'user', content: text }] : [];
+      }
+      return rawInput
+        .map((msg) => {
+          const role = ['system', 'user', 'assistant'].includes(msg?.role) ? msg.role : 'user';
+          const content = flattenContentToText(msg?.content);
+          return content ? { role, content } : null;
+        })
+        .filter(Boolean);
+    };
+
+    const extractQuestionFromLegacyInput = (rawInput) => {
+      const msgs = normalizeMessages(rawInput);
+      if (!msgs.length) return '';
+      return String(msgs[msgs.length - 1]?.content || '').trim();
+    };
+
+    const callGroq = async ({ messages, temperature = 0.2, maxTokens = 600 }) => {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature,
+          max_tokens: maxTokens,
+        }),
+      });
+      if (!res.ok) {
+        const detail = await res.text();
+        const err = new Error('api_error');
+        err.apiDetail = detail;
+        throw err;
+      }
+      const data = await res.json();
+      return String(data?.choices?.[0]?.message?.content || '').trim();
+    };
+
+    const pruneSessions = () => {
+      if (aiSessionStore.size <= MAX_AI_SESSIONS) return;
+      const oldest = Array.from(aiSessionStore.entries()).sort((a, b) => (a[1]?.lastSeen || 0) - (b[1]?.lastSeen || 0));
+      const extra = aiSessionStore.size - MAX_AI_SESSIONS;
+      for (let i = 0; i < extra; i += 1) aiSessionStore.delete(oldest[i][0]);
+    };
+
+    const sessionId = String(payload?.sessionId || 'default');
+    let session = aiSessionStore.get(sessionId) || {
+      fileSignature: '',
+      fileContext: '',
+      history: [],
+      lastSeen: Date.now(),
+    };
+
+    const file = payload?.file;
+    if (file?.base64) {
+      const fileName = String(file?.name || 'document.bin');
+      const fileType = String(file?.type || 'application/octet-stream');
+      const rawBase64 = String(file?.base64 || '');
+      const signature = `${fileName}|${fileType}|${rawBase64.length}|${rawBase64.slice(0, 32)}`;
+
+      if (signature !== session.fileSignature) {
+        let fileContext = '';
+        if (/^image\//i.test(fileType)) {
+          const imageMessages = [
+            {
+              role: 'system',
+              content:
+                'You are a document grounding engine. Build a concise context capsule from this image for future Q&A. Include key entities, dates, roles, skills, education, contacts, and notable facts. Keep it compact and factual.',
+            },
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: `Create context capsule for file ${fileName} (${fileType}).` },
+                { type: 'image_url', image_url: { url: `data:${fileType};base64,${rawBase64}` } },
+              ],
+            },
+          ];
+          fileContext = await callGroq({ messages: imageMessages, temperature: 0.0, maxTokens: 900 });
+        } else {
+          const initialCap = Number(process.env.GROQ_FILE_BASE64_MAX_CHARS || 24000);
+          const minCap = 4000;
+          let cap = Math.max(minCap, initialCap);
+          while (cap >= minCap) {
+            const safeBase64 = rawBase64.slice(0, cap);
+            const truncated = rawBase64.length > cap;
+            const nonImageMessages = [
+              {
+                role: 'system',
+                content:
+                  'You are a document grounding engine. Build a concise context capsule from attached file payload for future Q&A. Include key entities, dates, roles, skills, education, contacts, and important details. If payload is partial, mention that.',
+              },
+              {
+                role: 'user',
+                content: `File name: ${fileName}
+File type: ${fileType}
+Payload status: ${truncated ? `truncated to first ${cap} base64 chars` : 'full payload'}
+File base64 payload:
+${safeBase64}`,
+              },
+            ];
+            try {
+              fileContext = await callGroq({ messages: nonImageMessages, temperature: 0.0, maxTokens: 900 });
+              break;
+            } catch (ingestErr) {
+              const detail = String(ingestErr?.apiDetail || ingestErr?.message || '');
+              const tooLarge = /rate_limit_exceeded|request too large|reduce your message size|tokens per minute|tpm/i.test(detail);
+              if (tooLarge && cap > minCap) {
+                cap = Math.floor(cap * 0.6);
+                continue;
+              }
+              throw ingestErr;
+            }
+          }
+        }
+
+        session = {
+          fileSignature: signature,
+          fileContext: String(fileContext || '').slice(0, 12000),
+          history: [],
+          lastSeen: Date.now(),
+        };
+      }
     }
-    const data = await res.json();
-    return { data };
+
+    if (payload?.ingestOnly) {
+      session.lastSeen = Date.now();
+      aiSessionStore.set(sessionId, session);
+      pruneSessions();
+      return { data: { output_text: 'File context initialized.' } };
+    }
+
+    const question = String(payload?.question || '').trim() || extractQuestionFromLegacyInput(payload?.input);
+    if (!question) return { error: 'invalid_payload', detail: 'No question provided.' };
+
+    const answerMessages = [
+      {
+        role: 'system',
+        content:
+          'You are CyberVault assistant. Answer casual queries naturally. If file context is present, use it when relevant. If user asks file-specific details not present in context, say it is not available.',
+      },
+    ];
+    if (session.fileContext) {
+      answerMessages.push({
+        role: 'system',
+        content: `File context capsule:\n${session.fileContext}`,
+      });
+    }
+    if (Array.isArray(session.history) && session.history.length) {
+      answerMessages.push(...session.history.slice(-10));
+    }
+    answerMessages.push({ role: 'user', content: question });
+
+    const out = await callGroq({ messages: answerMessages, temperature: 0.2, maxTokens: 650 });
+    const reply = String(out || '').trim();
+    if (!reply) return { error: 'api_error', detail: 'Empty response from model.' };
+
+    session.history = [...(session.history || []), { role: 'user', content: question }, { role: 'assistant', content: reply }].slice(-12);
+    session.lastSeen = Date.now();
+    aiSessionStore.set(sessionId, session);
+    pruneSessions();
+    return { data: { output_text: reply } };
   } catch (error) {
-    console.error('OpenAI OCR error:', error);
+    if (error?.message === 'api_error' && error?.apiDetail) {
+      return { error: 'api_error', detail: String(error.apiDetail) };
+    }
+    console.error('Groq OCR answer error:', error);
     return { error: 'exception', detail: String(error) };
   }
+};
+
+ipcMain.handle('groq-ocr-answer', async (event, payload) => {
+  return handleGroqOcrAnswer(payload);
+});
+
+// Backward compatibility for older renderer builds that still invoke the old channel name.
+ipcMain.handle('openai-ocr-answer', async (event, payload) => {
+  return handleGroqOcrAnswer(payload);
 });
 
 ipcMain.handle('openai-ocr-extract-text', async (event, payload) => {
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) return { error: 'missing_api_key' };
-
-    const model = process.env.OPENAI_VISION_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini';
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    };
-    if (process.env.OPENAI_PROJECT) headers['OpenAI-Project'] = process.env.OPENAI_PROJECT;
-    if (process.env.OPENAI_ORG) headers['OpenAI-Organization'] = process.env.OPENAI_ORG;
-
-    const imageDataUrl = payload?.imageDataUrl;
-    if (!imageDataUrl || typeof imageDataUrl !== 'string') {
-      return { error: 'invalid_payload' };
-    }
-
-    const res = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        model,
-        temperature: 0,
-        max_output_tokens: 2200,
-        input: [
-          {
-            role: 'system',
-            content: [
-              {
-                type: 'input_text',
-                text: 'You are an OCR engine. Extract all visible text exactly from the image. Keep natural line breaks. Return plain text only.',
-              },
-            ],
-          },
-          {
-            role: 'user',
-            content: [
-              { type: 'input_text', text: 'Extract full text from this document image.' },
-              { type: 'input_image', image_url: imageDataUrl },
-            ],
-          },
-        ],
-      }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      return { error: 'api_error', detail: text };
-    }
-    const data = await res.json();
-    let out = data?.output_text || '';
-    if (!out && Array.isArray(data?.output)) {
-      for (const item of data.output) {
-        if (Array.isArray(item?.content)) {
-          for (const c of item.content) {
-            if (c?.type === 'output_text' && c?.text) out += c.text;
-          }
-        }
-      }
-    }
-    return { data: { text: (out || '').trim() } };
+    return { error: 'provider_disabled', detail: 'Vision OCR via OpenAI has been disabled. Use Google Vision or Tesseract fallback.' };
   } catch (error) {
-    console.error('OpenAI OCR extract error:', error);
+    console.error('Vision OCR bridge error:', error);
     return { error: 'exception', detail: String(error) };
   }
 });

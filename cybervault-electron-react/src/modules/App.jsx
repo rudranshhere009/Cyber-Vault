@@ -4356,10 +4356,14 @@ function App() {
       )}
 
       {loading.visible && (
-        <div className="loading active" id="loadingOverlay">
-          <div>
+        <div className="loading active" id="loadingOverlay" role="status" aria-live="polite" aria-label="Authentication in progress">
+          <div className="loading-shell">
             <div className="loading-spinner"></div>
             <div className="loading-text" id="loadingText" dangerouslySetInnerHTML={{ __html: `${loading.message}<br>&gt; quantum.encryption.protocols.active` }} />
+            <div className="loading-parallel" aria-hidden="true">
+              <span></span>
+              <span></span>
+            </div>
           </div>
         </div>
       )}
@@ -4765,7 +4769,6 @@ function App() {
             generateChecksum={generateChecksum}
             ensureMasterPassword={ensureMasterPassword}
             showNotification={showNotification}
-            isDemo={!!session?.demo}
           />
         </Suspense>
       )}

@@ -2,6 +2,7 @@ import Tesseract from 'tesseract.js';
 import React, { useState, useRef, useEffect } from 'react';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import pdfWorker from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
+import { getCasualQaResponse, isFileRelatedQuestion } from './casualQa';
 
 // Set worker source for pdf.js
 	pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
@@ -216,7 +217,7 @@ const extractDocxTextAndLinks = async (arrayBuffer) => {
 	return { text: merged, links: Array.from(links) };
 };
 
-const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, generateChecksum, ensureMasterPassword, showNotification, isDemo = false }) => {
+const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, generateChecksum, ensureMasterPassword, showNotification }) => {
 	const [messages, setMessages] = useState([]);
 	const [input, setInput] = useState('');
 	const [currentFile, setCurrentFile] = useState(null);
@@ -225,6 +226,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 	const [extractError, setExtractError] = useState('');
 	const [isThinking, setIsThinking] = useState(false);
 	const [isListening, setIsListening] = useState(false);
+	const [useFileContext, setUseFileContext] = useState(false);
 	const [ocrQuery, setOcrQuery] = useState('');
 	const [ocrLinks, setOcrLinks] = useState([]);
 	const [isChatOpen, setIsChatOpen] = useState(false);
@@ -232,10 +234,6 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 	const [ocrType, setOcrType] = useState('all');
 	const messagesEndRef = useRef(null);
 	const recognitionRef = useRef(null);
-	const showDemoChatDenied = () => {
-		showNotification('> access.denied.login.to.use.ai.chatbot.with.ocr', 'error');
-		setMessages((prev) => [...prev, { sender: 'bot', text: 'AI chatbot access is disabled in Demo Mode. Log in to use OCR + AI chat.' }]);
-	};
 
 	const filteredFiles = React.useMemo(() => {
 		const q = ocrQuery.trim().toLowerCase();
@@ -273,10 +271,6 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 
 	// Voice input (speech-to-text)
 	const startListening = () => {
-		if (isDemo) {
-			showDemoChatDenied();
-			return;
-		}
 		if (!('webkitSpeechRecognition' in window)) {
 			alert('Speech recognition not supported in this browser.');
 			return;
@@ -321,10 +315,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 				if (txt) return txt;
 			}
 		}
-		if (!window.electronAPI?.openaiOcrExtractText) return '';
-		const res = await window.electronAPI.openaiOcrExtractText({ imageDataUrl });
-		if (res?.error) return '';
-		return (res?.data?.text || '').trim();
+		return '';
 	};
 
 	// Extract text from file (OCR for images, direct for text)
@@ -380,7 +371,7 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 				showNotification('> running.ocr.on.pdf', 'info');
 				const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
 				let mergedPdfText = '';
-				const useVision = Boolean(window.electronAPI?.googleOcrExtractText || window.electronAPI?.openaiOcrExtractText);
+				const useVision = Boolean(window.electronAPI?.googleOcrExtractText);
 				for (let i = 1; i <= pdf.numPages; i++) {
 					showNotification(`> processing.pdf.page.${i}.of.${pdf.numPages}`, 'info');
 					const page = await pdf.getPage(i);
@@ -475,220 +466,153 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 	};
 
 
-	// Q&A logic: Thor answers based on ocrText
+	// Hybrid routing:
+	// 1) Common casual questions -> local response bank
+	// 2) Other questions -> AI
+	// 3) File-context questions -> AI with extracted text context
 	const handleSend = async () => {
-		if (!input.trim()) return;
-		if (isDemo) {
-			showDemoChatDenied();
-			setInput('');
-			return;
-		}
-		const userMessage = { sender: 'user', text: input };
+		const userInput = input.trim();
+		if (!userInput) return;
+		const userMessage = { sender: 'user', text: userInput };
 		setMessages((prev) => [...prev, userMessage]);
 		setInput('');
-		if (!ocrText || !ocrText.trim()) {
-			setTimeout(() => {
-				setMessages((prev) => [...prev, { sender: 'bot', text: 'Please run OCR on a file first so I can answer questions about it.' }]);
-			}, 300);
+		const recentConversation = [...messages.slice(-6), userMessage]
+			.map((msg) => {
+				const role = msg.sender === 'user' ? 'User' : 'Assistant';
+				const text = String(msg.text || '').replace(/\s+/g, ' ').trim().slice(0, 220);
+				return text ? `${role}: ${text}` : '';
+			})
+			.filter(Boolean)
+			.join('\n');
+
+		if (!useFileContext) {
+			const casual = getCasualQaResponse(userInput);
+			if (casual) {
+				setTimeout(() => {
+					setMessages((prev) => [
+						...prev,
+						{ sender: 'bot', text: casual.response, category: 'casual', casualCategory: casual.category },
+					]);
+				}, 180);
+				return;
+			}
+		}
+
+		const fileQuery = useFileContext || isFileRelatedQuestion(userInput);
+
+		const webGroqAnswer = async (reqPayload) => {
+			const response = await fetch('/api/groq-ocr-answer', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(reqPayload || {}),
+			});
+			let json = null;
+			try {
+				json = await response.json();
+			} catch {
+				json = null;
+			}
+			if (!response.ok) {
+				throw new Error(json?.detail || `HTTP ${response.status}`);
+			}
+			if (!json || typeof json !== 'object') {
+				throw new Error('Invalid API response');
+			}
+			return json;
+		};
+
+		const aiHandlers = [
+			{ name: 'groq', fn: window.electronAPI?.groqOcrAnswer },
+			{ name: 'legacy', fn: window.electronAPI?.openaiOcrAnswer },
+			{ name: 'web-groq', fn: !window.electronAPI ? webGroqAnswer : null },
+		].filter((h) => typeof h.fn === 'function');
+		if (!aiHandlers.length) {
+			setMessages((prev) => [...prev, { sender: 'bot', text: 'AI handler is unavailable in this runtime.', category: 'ai' }]);
 			return;
 		}
 
-		const systemPrompt = `You are CyberVault OCR assistant. Answer only using the provided extracted text. If the user asks for a specific section, return only that section. If the user asks for points/bullets, return bullet points. If you cannot find the answer, say so clearly. Keep answers concise and factual.`;
-		const clippedText = ocrText.length > 12000 ? ocrText.slice(0, 12000) : ocrText;
-		const userPrompt = `Extracted text:\n${clippedText}\n\nQuestion: ${input}`;
+		try {
+			setIsThinking(true);
 
-		if (window.electronAPI?.openaiOcrAnswer) {
-			try {
-				setIsThinking(true);
-				const res = await window.electronAPI.openaiOcrAnswer({
-					input: [
-						{ role: 'system', content: [{ type: 'input_text', text: systemPrompt }] },
-						{ role: 'user', content: [{ type: 'input_text', text: userPrompt }] },
-					],
-				});
-				if (res?.error) {
-					if (res.error === 'missing_api_key') throw new Error('OpenAI API key not configured');
-					if (res.error === 'api_error' && res.detail) throw new Error(`API error: ${res.detail}`);
-					throw new Error(res.error);
+			const invokeAiWithFallback = async (reqPayload) => {
+				let lastError = null;
+				for (const handler of aiHandlers) {
+					try {
+						const res = await handler.fn(reqPayload);
+						if (res?.error) {
+							if (res.error === 'missing_api_key') throw new Error('Groq API key not configured');
+							if (res.error === 'api_error' && res.detail) throw new Error(`API error: ${res.detail}`);
+							if (res.detail) throw new Error(`${res.error}: ${res.detail}`);
+							throw new Error(res.error);
+						}
+						return res;
+					} catch (err) {
+						lastError = err;
+						const msg = String(err?.message || err || '');
+						const missingGroqHandler = /no handler registered/i.test(msg) && /groq-ocr-answer/i.test(msg);
+						if (handler.name === 'groq' && missingGroqHandler) continue;
+						break;
+					}
 				}
-				const data = res?.data;
-				let out = '';
-				if (data?.output_text) out = data.output_text;
-				if (!out && Array.isArray(data?.output)) {
-					for (const item of data.output) {
-						if (Array.isArray(item?.content)) {
-							for (const c of item.content) {
-								if (c?.type === 'output_text' && c?.text) out += c.text;
-							}
+				if (lastError) throw lastError;
+				throw new Error('AI handler invocation failed');
+			};
+
+			let aiQuestion = userInput;
+			if (fileQuery) {
+				if (!currentFile) {
+					setMessages((prev) => [...prev, { sender: 'bot', text: 'Select a file first for file-based questions.', category: 'ocr' }]);
+					return;
+				}
+				if (!ocrText || !ocrText.trim()) {
+					setMessages((prev) => [...prev, { sender: 'bot', text: 'Please run OCR on the selected file first.', category: 'ocr' }]);
+					return;
+				}
+				const clippedText = ocrText.length > 12000 ? ocrText.slice(0, 12000) : ocrText;
+				aiQuestion = `You are answering from the selected file context. Use recent chat context for follow-up questions like "which one", "that", or "he".
+Recent chat:
+${recentConversation || 'User: ' + userInput}
+
+Use only this extracted text from the selected file as context.
+Extracted text:
+${clippedText}
+
+Question: ${userInput}`;
+			}
+
+			const res = await invokeAiWithFallback({ question: aiQuestion });
+
+			const data = res?.data;
+			let out = '';
+			if (data?.output_text) out = data.output_text;
+			if (!out && Array.isArray(data?.output)) {
+				for (const item of data.output) {
+					if (Array.isArray(item?.content)) {
+						for (const c of item.content) {
+							if (c?.type === 'output_text' && c?.text) out += c.text;
 						}
 					}
 				}
-				if (out && out.trim()) {
-					setMessages((prev) => [...prev, { sender: 'bot', text: out.trim() }]);
-					setIsThinking(false);
-					return;
-				}
-			} catch (err) {
-				setMessages((prev) => [...prev, { sender: 'bot', text: `AI error: ${err.message}. Falling back to local search.` }]);
-			} finally {
-				setIsThinking(false);
 			}
+			if (!out || !out.trim()) throw new Error('AI returned empty output');
+			setMessages((prev) => [...prev, { sender: 'bot', text: out.trim(), category: fileQuery ? 'ocr' : 'ai' }]);
+		} catch (err) {
+			setMessages((prev) => [...prev, { sender: 'bot', text: `AI error: ${err.message}.`, category: 'ai' }]);
+		} finally {
+			setIsThinking(false);
 		}
-		const wantsBullets = /points|bullet|bullets|list|in points/i.test(input);
-		const wantOnly = /only|just|specifically|particular|section/i.test(input);
-		const sectionKey = (() => {
-			const q = input.toLowerCase();
-			if (q.match(/education|qualification|school|college|degree/)) return 'education';
-			if (q.match(/experience|work|employment|internship|project/)) return 'experience';
-			if (q.match(/skills|tech|stack|tools|languages/)) return 'skills';
-			if (q.match(/certification|certificate/)) return 'certifications';
-			if (q.match(/contact|email|phone|address/)) return 'contact';
-			return null;
-		})();
-		const sectionKeys = (() => {
-			const keys = [];
-			const q = input.toLowerCase();
-			if (q.match(/education|qualification|school|college|degree/)) keys.push('education');
-			if (q.match(/experience|work|employment|internship|project/)) keys.push('experience');
-			if (q.match(/skills|tech|stack|tools|languages/)) keys.push('skills');
-			if (q.match(/certification|certificate/)) keys.push('certifications');
-			if (q.match(/contact|email|phone|address/)) keys.push('contact');
-			return Array.from(new Set(keys));
-		})();
-
-		const extractSectionText = (text, key) => {
-			const keywords = {
-				education: ['EDUCATION', 'QUALIFICATION', 'SCHOOL', 'COLLEGE', 'UNIVERSITY', 'DEGREE', 'B.TECH', 'DIPLOMA'],
-				experience: ['EXPERIENCE', 'WORK', 'EMPLOYMENT', 'INTERNSHIP', 'PROJECT'],
-				skills: ['SKILLS', 'TECH STACK', 'TECHNOLOGIES', 'LANGUAGES', 'TOOLS', 'FRAMEWORKS'],
-				certifications: ['CERTIFICATION', 'CERTIFICATIONS', 'CERTIFICATE'],
-				contact: ['CONTACT', 'EMAIL', 'PHONE', 'ADDRESS'],
-			};
-			const lines = text.split(/\r?\n/);
-			const lineStarts = [];
-			let offset = 0;
-			for (const line of lines) {
-				lineStarts.push(offset);
-				offset += line.length + 1;
-			}
-			const upper = text.toUpperCase();
-			const occurrences = [];
-			Object.keys(keywords).forEach(k => {
-				keywords[k].forEach(word => {
-					let idx = upper.indexOf(word);
-					while (idx !== -1) {
-						const lineIdx = lineStarts.findIndex((s, i) => idx >= s && idx < (lineStarts[i + 1] ?? Infinity));
-						occurrences.push({ key: k, idx, lineIdx });
-						idx = upper.indexOf(word, idx + word.length);
-					}
-				});
-			});
-			if (!occurrences.length) return '';
-			occurrences.sort((a, b) => a.idx - b.idx);
-			const startOcc = occurrences.find(o => o.key === key);
-			if (!startOcc) return '';
-			const startLine = startOcc.lineIdx;
-			const nextOcc = occurrences.find(o => o.lineIdx > startLine);
-			const endLine = nextOcc ? nextOcc.lineIdx : lines.length;
-			const sectionLines = lines.slice(startLine + 1, endLine).map(l => l.trim()).filter(Boolean);
-			if (sectionLines.length) return sectionLines.join('\n').trim();
-			const fallback = lines.map(l => l.trim()).filter(Boolean).filter(l => {
-				const u = l.toUpperCase();
-				return keywords[key].some(w => u.includes(w));
-			});
-			return fallback.join('\n').trim();
-		};
-
-		const formatBullets = (text) => {
-			const byLines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-			const splitLines = byLines.flatMap(l => l.split(/,|\s{2,}/).map(s => s.trim()).filter(Boolean));
-			const bullets = splitLines.length ? splitLines : text.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
-			return bullets.slice(0, 10).map(b => `- ${b}`).join('\n');
-		};
-
-		// Improved Q&A logic
-		let answer = '';
-		const lowerInput = input.toLowerCase();
-		if (lowerInput.includes('summary') || lowerInput.includes('summarize') || lowerInput.includes('context') || lowerInput.includes('what is inside') || lowerInput.includes('about the file')) {
-			// Try to generate a factual summary
-			if (!ocrText.trim()) {
-				answer = 'The file appears to be empty or could not be read.';
-			} else {
-				// Use first lines as a summary, but phrase it nicely
-				const lines = ocrText.split(/\r?\n/).filter(Boolean);
-				let summary = '';
-				if (lines.length > 1) {
-					summary = lines.slice(0, 3).join(' ');
-				} else {
-					summary = ocrText.slice(0, 300);
-				}
-				answer = `Summary of the file:\n\n${summary}${ocrText.length > 300 ? '...' : ''}`;
-			}
-		} else if (lowerInput.includes('document name') || lowerInput.includes('file name') || lowerInput.includes('name of this document')) {
-			answer = currentFile ? `The document name is: ${currentFile.name}` : 'No file is selected yet.';
-		} else if (lowerInput.includes('content') || lowerInput.includes('show')) {
-			answer = ocrText.length > 1000 ? ocrText.slice(0, 1000) + '...' : ocrText;
-		} else if (sectionKeys.length) {
-			const sections = sectionKeys.map(k => ({ key: k, text: extractSectionText(ocrText, k) }))
-				.filter(s => s.text && s.text.length > 10);
-			if (!sections.length) {
-				answer = `I couldn't find the requested section(s) in this file.`;
-			} else {
-				answer = sections.map(s => {
-					if (wantsBullets) {
-						return `${s.key.toUpperCase()}:\n${formatBullets(s.text)}`;
-					}
-					if (wantOnly) {
-						return `${s.key.toUpperCase()}:\n${s.text}`;
-					}
-					const short = s.text.split(/\r?\n/).slice(0, 6).join('\n');
-					return `${s.key.toUpperCase()}:\n${short}`;
-				}).join('\n\n');
-			}
-		} else {
-			// Smarter match: score lines by keyword overlap
-			const normalized = ocrText
-				.replace(/\s+/g, ' ')
-				.replace(/[^\w\s]/g, ' ')
-				.toLowerCase();
-			const lines = normalized.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-			const rawLines = ocrText.split(/\r?\n/).map(l => l.trim());
-			const query = input.toLowerCase().replace(/[^\w\s]/g, ' ').split(/\s+/).filter(Boolean);
-			const scoreLine = (line) => {
-				let score = 0;
-				for (const term of query) {
-					if (term.length < 3) continue;
-					if (line.includes(term)) score += 2;
-				}
-				return score;
-			};
-			let bestIdx = -1;
-			let bestScore = 0;
-			lines.forEach((l, i) => {
-				const s = scoreLine(l);
-				if (s > bestScore) { bestScore = s; bestIdx = i; }
-			});
-			if (bestScore > 0 && bestIdx !== -1) {
-				const snippet = rawLines.slice(Math.max(0, bestIdx - 1), bestIdx + 2).join('\n');
-				answer = `Relevant section:\n${snippet}`;
-			} else {
-				answer = 'Sorry, I could not find anything relevant in the file.';
-			}
-		}
-		setTimeout(() => {
-			setMessages((prev) => [...prev, { sender: 'bot', text: answer }]);
-		}, 500);
 	};
 
 	useEffect(() => {
 		if (open) {
 			setMessages([
-				{ sender: 'bot', text: 'Welcome to the OCR section. Select a file from your vault to extract and analyze its text. You can then ask questions about the file.' }
+				{ sender: 'bot', text: 'Welcome to the OCR section. Casual chat is local. For document questions, select a file and run OCR.' }
 			]);
 			setCurrentFile(null);
 			setOcrText('');
 			setOcrLinks([]);
 			setIsChatOpen(false);
+			setUseFileContext(false);
 			setInput('');
 			setExtractError('');
 		}
@@ -733,7 +657,6 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 					<div className="ocr-header-actions">
 						<button className="cyber-btn btn-secondary" onClick={() => {
 							setIsChatOpen(true);
-							if (isDemo) showDemoChatDenied();
 						}}>
 							AI Chatbot
 						</button>
@@ -874,14 +797,14 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 								<span className="ocr-icon">AI</span>
 								<div>
 									<div className="ocr-title-text">Neural OCR Chatbot</div>
-									<div className="ocr-subtitle">{isDemo ? 'Demo mode: login required for AI chat' : 'Ask questions about extracted content'}</div>
+									<div className="ocr-subtitle">Ask questions about extracted content</div>
 								</div>
 							</div>
 							<button className="cyber-btn btn-danger" onClick={() => setIsChatOpen(false)}>Close</button>
 						</div>
 						<div className="ocr-chatbot-body">
 							<div className="ocr-panel ocr-chat">
-								<div className="ocr-panel-title">{isDemo ? 'Ask the Vault (Login Required)' : 'Ask the Vault'}</div>
+								<div className="ocr-panel-title">Ask the Vault</div>
 								<div className="ocr-messages">
 									{messages.map((msg, index) => (
 										<div key={index} className={`ocr-msg ${msg.sender === 'user' ? 'user' : 'bot'}`}>
@@ -901,44 +824,46 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 								</div>
 								<div className="ocr-input-row">
 									<textarea
-										className="form-input"
+										className="form-input ocr-chat-input"
 										placeholder={
-											isDemo
-												? 'Demo mode: OCR extraction only. Log in for AI chat.'
-												: (currentFile ? 'Ask about the selected file...' : 'Select a file to start...')
+											useFileContext
+												? (currentFile ? 'Context mode ON: ask from selected file...' : 'Context mode ON: select a file and run OCR first...')
+												: (currentFile ? 'Ask anything about this file...' : 'Ask anything... (select a file for file-grounded answers)')
 										}
 										value={input}
 										onChange={e => setInput(e.target.value)}
 										onKeyPress={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
 										rows="3"
-										disabled={!currentFile || isExtracting || isDemo}
+										disabled={isExtracting}
 									/>
-									<button
-										onClick={isListening ? stopListening : startListening}
-										className="cyber-btn btn-primary"
-										title={isListening ? 'Stop voice input' : 'Speak your question'}
-										disabled={isThinking || isDemo}
-									>
-										{isListening ? (
-											<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-												<rect x="6" y="6" width="12" height="12" rx="2"></rect>
-											</svg>
-										) : (
-											<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-												<path d="M12 1v22"></path>
-												<path d="M8 5a4 4 0 0 1 8 0v6a4 4 0 0 1-8 0z"></path>
-												<path d="M5 10a7 7 0 0 0 14 0"></path>
-											</svg>
-										)}
-									</button>
-									<button
-										onClick={handleSend}
-										className="cyber-btn btn-secondary"
-										disabled={!currentFile || isExtracting || !input.trim() || isThinking || isDemo}
-										title="Send question"
-									>
-										{isThinking ? 'Thinking...' : 'Send'}
-									</button>
+									<div className="ocr-chat-actions">
+										<button
+											onClick={isListening ? stopListening : startListening}
+											className="cyber-btn btn-primary ocr-voice-btn"
+											title={isListening ? 'Stop voice input' : 'Speak your question'}
+											disabled={isThinking}
+										>
+											{isListening ? 'Stop Voice' : 'Voice'}
+										</button>
+										<div className="ocr-chat-actions-row">
+											<button
+												onClick={() => setUseFileContext((prev) => !prev)}
+												className={`cyber-btn ${useFileContext ? 'btn-primary' : 'btn-secondary'} ocr-context-btn`}
+												title="Toggle file context mode"
+												disabled={isExtracting || isThinking}
+											>
+												{useFileContext ? 'Context: On' : 'Context: Off'}
+											</button>
+											<button
+												onClick={handleSend}
+												className="cyber-btn btn-secondary ocr-send-btn"
+												disabled={isExtracting || !input.trim() || isThinking}
+												title="Send question"
+											>
+												{isThinking ? 'Thinking...' : 'Send'}
+											</button>
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>
