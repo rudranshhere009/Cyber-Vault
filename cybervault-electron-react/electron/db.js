@@ -113,6 +113,9 @@ export async function initCyberVaultDb(userDataPath) {
       checksum TEXT,
       stored_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
+      deleted INTEGER NOT NULL DEFAULT 0,
+      deleted_at TEXT NULL,
+      deleted_by TEXT NULL,
       FOREIGN KEY (user_email) REFERENCES users(email) ON DELETE CASCADE
     )
   `);
@@ -229,14 +232,15 @@ export const FileOwnershipModel = {
     const now = new Date().toISOString();
     await run('BEGIN TRANSACTION');
     try {
-      await run('DELETE FROM file_records WHERE user_email = ?', [email]);
+      // mark existing records as deleted (tombstone)
+      await run('UPDATE file_records SET deleted = 1, deleted_at = ? WHERE user_email = ? AND deleted = 0', [now, email]);
       for (const file of files) {
         if (!file || !file.name) continue;
         await run(
           `
           INSERT INTO file_records (
-            user_email, data_id, file_name, file_type, file_size, checksum, stored_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            user_email, data_id, file_name, file_type, file_size, checksum, stored_at, updated_at, deleted
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
           `,
           [
             email,

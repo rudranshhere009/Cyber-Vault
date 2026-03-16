@@ -5,6 +5,7 @@ const OCRSection = lazy(() => import('../components/Chatbot'));
 const IrisModal = lazy(() => import('../components/IrisModal'));
 const FingerprintAuth = lazy(() => import('../components/FingerprintAuth'));
 const MissionMode = lazy(() => import('../components/MissionMode'));
+const AdminPanel = lazy(() => import('../components/Admin'));
 
 let pdfJsLibPromise;
 async function loadPdfJsLib() {
@@ -23,7 +24,73 @@ async function loadPdfJsLib() {
 let irisDetectorPromise;
 async function loadIrisDetector() {
   if (!irisDetectorPromise) {
-    irisDetectorPromise = import('../utils/irisDetection').then((mod) => new mod.default());
+    irisDetectorPromise = (async () => {
+      const tried = [];
+      try {
+        console.log('iris: loader running on origin', window.location?.origin || 'unknown');
+      } catch (oErr) {
+        console.warn('iris: could not read window.location.origin', oErr);
+      }
+      // Try canonical relative import first
+      try {
+        const mod = await import('../utils/irisDetection.js');
+        console.log('iris: imported ../utils/irisDetection.js ok');
+        return new mod.default();
+      } catch (e1) {
+        tried.push({ path: '../utils/irisDetection.js', error: e1 });
+        console.warn('iris: failed import ../utils/irisDetection.js', e1 && e1.stack ? e1.stack : e1);
+      }
+      // If relative import failed, fall back to inline detector (avoid absolute /src requests)
+      console.warn('iris: dynamic import failed — falling back to inline IrisDetector implementation');
+      // Inline fallback implementation (simple, same API as src/utils/irisDetection.js)
+      class IrisDetectorFallback {
+        constructor() { this.isInitialized = false; }
+        async initialize() {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+            stream.getTracks().forEach(t => t.stop());
+            this.isInitialized = true;
+            console.log('IrisDetectorFallback initialized');
+            return true;
+          } catch (error) {
+            console.error('IrisDetectorFallback init failed', error);
+            throw error;
+          }
+        }
+        async detectIris(videoElement) {
+          if (!this.isInitialized) throw new Error('Iris detector not initialized');
+          try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = videoElement.videoWidth || 640;
+            canvas.height = videoElement.videoHeight || 480;
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const regionSize = 100;
+            const imageData = ctx.getImageData(centerX - regionSize/2, centerY - regionSize/2, regionSize, regionSize);
+            const template = [];
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 16) {
+              const r = data[i], g = data[i+1], b = data[i+2];
+              const brightness = Math.round(0.299*r + 0.587*g + 0.114*b);
+              template.push(brightness);
+            }
+            return template;
+          } catch (err) {
+            console.error('Iris detection error (fallback):', err);
+            return null;
+          }
+        }
+        compareIrisTemplates(t1, t2, threshold = 0.75) {
+          if (!t1 || !t2 || t1.length !== t2.length) return false;
+          let matches = 0; const tolerance = 30;
+          for (let i = 0; i < t1.length; i++) if (Math.abs(t1[i] - t2[i]) < tolerance) matches++;
+          return (matches / t1.length) >= threshold;
+        }
+      }
+      return new IrisDetectorFallback();
+    })();
   }
   return irisDetectorPromise;
 }
@@ -657,6 +724,14 @@ function App() {
   const [demoSplashOpen, setDemoSplashOpen] = useState(false);
 
   const [page, setPage] = useState('welcome');
+
+  useEffect(() => {
+    try {
+      const hash = String(window.location.hash || '').replace('#', '');
+      const params = new URLSearchParams(window.location.search || '');
+      if (hash === 'admin' || params.get('admin') === '1') setPage('admin');
+    } catch {}
+  }, []);
   const handleGoToLogin = useCallback(() => {
     setMode('login');
     setPage('login');
@@ -983,6 +1058,25 @@ function App() {
   };
   const vaultIndexKey = (email) => normalizeEmail(email) || 'anon';
   const DEMO_CLEANUP_KEY = 'cyberVaultDemoCleanup';
+  const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
+
+  const callDbApi = useCallback(async (path, options = {}) => {
+    if (typeof window !== 'undefined' && window.electronAPI) return null;
+    try {
+      const res = await fetch(`${API_BASE_URL}${path}`, {
+        method: options.method || 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(options.headers || {}),
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined,
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  }, [API_BASE_URL]);
 
   const getUserRecordByEmail = useCallback(async (email) => {
     const normalizedEmail = normalizeEmail(email);
@@ -995,19 +1089,24 @@ function App() {
       } catch {}
     }
 
+    const apiUser = await callDbApi(`/api/users/${encodeURIComponent(normalizedEmail)}`);
+    if (apiUser?.email) return apiUser;
+
     try {
       const legacy = JSON.parse(localStorage.getItem('neuralUser_' + normalizedEmail) || '{}');
       if (legacy?.email) {
         const normalizedLegacy = { ...legacy, email: normalizedEmail };
         if (window.electronAPI?.dbUpsertUser) {
           try { await window.electronAPI.dbUpsertUser(normalizedLegacy); } catch {}
+        } else {
+          await callDbApi('/api/users', { method: 'POST', body: normalizedLegacy });
         }
         return normalizedLegacy;
       }
     } catch {}
 
     return {};
-  }, []);
+  }, [callDbApi]);
 
   const upsertUserRecord = useCallback(async (userData) => {
     if (!userData?.email) return null;
@@ -1017,11 +1116,13 @@ function App() {
         return await window.electronAPI.dbUpsertUser(payload);
       } catch {}
     }
+    const apiSaved = await callDbApi('/api/users', { method: 'POST', body: payload });
+    if (apiSaved?.email) return apiSaved;
     try {
       localStorage.setItem('neuralUser_' + payload.email, JSON.stringify(payload));
     } catch {}
     return payload;
-  }, []);
+  }, [callDbApi]);
 
   const recordLoginEvent = useCallback(async (email, method = 'password', success = true) => {
     const normalizedEmail = normalizeEmail(email);
@@ -1029,17 +1130,26 @@ function App() {
     if (window.electronAPI?.dbRecordLogin) {
       try {
         await window.electronAPI.dbRecordLogin({ email: normalizedEmail, method, success, loggedInAt: new Date().toISOString() });
+        return;
       } catch {}
     }
-  }, []);
+    await callDbApi('/api/logins', {
+      method: 'POST',
+      body: { email: normalizedEmail, method, success, loggedInAt: new Date().toISOString() },
+    });
+  }, [callDbApi]);
 
   const refreshDbInsights = useCallback(async () => {
-    if (!window.electronAPI?.dbGetInsights) return;
-    try {
-      const insights = await window.electronAPI.dbGetInsights();
-      if (insights?.users && insights?.logins && insights?.files) setDbInsights(insights);
-    } catch {}
-  }, []);
+    if (window.electronAPI?.dbGetInsights) {
+      try {
+        const insights = await window.electronAPI.dbGetInsights();
+        if (insights?.users && insights?.logins && insights?.files) setDbInsights(insights);
+        return;
+      } catch {}
+    }
+    const insights = await callDbApi('/api/insights');
+    if (insights?.users && insights?.logins && insights?.files) setDbInsights(insights);
+  }, [callDbApi]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1197,6 +1307,16 @@ function App() {
       (async () => {
         try {
           await window.electronAPI.dbReplaceUserFiles({ email: normalizeEmail(session.email), files });
+          if (profileOpen) await refreshDbInsights();
+        } catch {}
+      })();
+    } else {
+      (async () => {
+        try {
+          await callDbApi('/api/files/replace', {
+            method: 'POST',
+            body: { email: normalizeEmail(session.email), files },
+          });
           if (profileOpen) await refreshDbInsights();
         } catch {}
       })();
@@ -1723,13 +1843,7 @@ function App() {
 
   // NEW: Iris functions
   async function startIrisRegistration() {
-    try {
-      const irisDetector = await loadIrisDetector();
-      await irisDetector.initialize();
-    } catch (e) {
-      showNotification('> iris.module.load.failed', 'error');
-      throw e;
-    }
+    // Open the iris modal and let the modal initialize the detector to avoid double camera access
     return new Promise((resolve, reject) => {
       signupIrisResolveRef.current = { resolve, reject };
       setIrisMode('register');
@@ -1738,13 +1852,7 @@ function App() {
   }
 
   async function startIrisLogin() {
-    try {
-      const irisDetector = await loadIrisDetector();
-      await irisDetector.initialize();
-    } catch (e) {
-      showNotification('> iris.module.load.failed', 'error');
-      throw e;
-    }
+    // Open the iris modal and let the modal initialize the detector to avoid double camera access
     return new Promise((resolve, reject) => {
       loginIrisResolveRef.current = { resolve, reject };
       setIrisMode('login');
@@ -1779,8 +1887,12 @@ function App() {
   }
 
   async function compareIrisTemplates(template1, template2) {
-    const irisDetector = await loadIrisDetector();
-    return irisDetector.compareIrisTemplates(template1, template2, getIrisMatchThreshold());
+    if (!template1 || !template2 || template1.length !== template2.length) return false;
+    const tolerance = 30;
+    let matches = 0;
+    for (let i = 0; i < template1.length; i++) if (Math.abs(template1[i] - template2[i]) < tolerance) matches++;
+    const similarity = matches / template1.length;
+    return similarity >= getIrisMatchThreshold();
   }
 
   function euclidean(a, b) {
@@ -3257,7 +3369,16 @@ function App() {
   return (
     <div>
       {page === 'welcome' && (
-        <Welcome onLogin={handleGoToLogin} onSignup={handleGoToSignup} onDemo={startDemoMode} />
+        <Welcome onLogin={handleGoToLogin} onSignup={handleGoToSignup} onDemo={startDemoMode} onAdmin={() => setPage('admin')} />
+      )}
+
+      {page === 'admin' && (
+        <div style={{ padding: 16 }}>
+          <button className="back-to-welcome-btn" onClick={() => setPage('welcome')}>Back</button>
+          <Suspense fallback={<div>Loading admin...</div>}>
+            <AdminPanel />
+          </Suspense>
+        </div>
       )}
 
       {page === 'login' && (

@@ -1,11 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import IrisDetector from '../utils/irisDetection';
 
 function IrisModal({ mode, open, onClose, onRegistered, onAuthenticated }) {
   const videoRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('Initializing iris scanner...');
-  const [detector] = useState(new IrisDetector());
+  const detectorRef = useRef(null);
   const [samples, setSamples] = useState([]);
   const samplesRef = useRef([]);
   const isMobileCapture = () => {
@@ -27,8 +26,52 @@ function IrisModal({ mode, open, onClose, onRegistered, onAuthenticated }) {
         setLoading(true);
         setMessage('Loading iris detection modules...');
         
-        // Initialize iris detector
-        await detector.initialize();
+        // Dynamically load iris detector (avoid top-level static import so dev server errors don't break the page)
+        try {
+          const mod = await import('../utils/irisDetection.js');
+          console.log('IrisModal: loaded irisDetection module');
+          detectorRef.current = new mod.default();
+        } catch (impErr) {
+          console.warn('IrisModal: dynamic import failed, using inline fallback', impErr && impErr.stack ? impErr.stack : impErr);
+          // Inline fallback (same minimal API: initialize, detectIris)
+          class InlineFallback {
+            constructor() { this.isInitialized = false; }
+            async initialize() {
+              try {
+                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                s.getTracks().forEach(t => t.stop());
+                this.isInitialized = true;
+                console.log('Iris InlineFallback initialized');
+                return true;
+              } catch (e) {
+                console.error('Iris InlineFallback init failed', e);
+                throw e;
+              }
+            }
+            async detectIris(videoEl) {
+              if (!this.isInitialized) throw new Error('not initialized');
+              try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = videoEl.videoWidth || 640;
+                canvas.height = videoEl.videoHeight || 480;
+                ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+                const cx = canvas.width/2, cy = canvas.height/2, rs = 100;
+                const img = ctx.getImageData(cx-rs/2, cy-rs/2, rs, rs);
+                const out = [];
+                for (let i=0;i<img.data.length;i+=16) {
+                  const r = img.data[i], g = img.data[i+1], b = img.data[i+2];
+                  out.push(Math.round(0.299*r + 0.587*g + 0.114*b));
+                }
+                return out;
+              } catch (e) { console.error('Iris InlineFallback detect error', e); return null; }
+            }
+          }
+          detectorRef.current = new InlineFallback();
+        }
+
+        // Initialize detector instance
+        await detectorRef.current.initialize();
         
         if (cancelled) return;
         
@@ -58,7 +101,7 @@ function IrisModal({ mode, open, onClose, onRegistered, onAuthenticated }) {
             detectionInterval = setInterval(async () => {
               if (!open || !videoRef.current) return;
 
-              const irisData = await detector.detectIris(videoRef.current);
+              const irisData = await detectorRef.current.detectIris(videoRef.current);
               
               if (irisData) {
                 const mean = irisData.reduce((sum, v) => sum + v, 0) / irisData.length;
@@ -118,7 +161,7 @@ function IrisModal({ mode, open, onClose, onRegistered, onAuthenticated }) {
         stream.getTracks().forEach(t => t.stop());
       }
     };
-  }, [open, mode, onClose, onAuthenticated, onRegistered, detector]);
+  }, [open, mode, onClose, onAuthenticated, onRegistered]);
 
   function averageIrisTemplates(templates) {
     if (templates.length === 0) return [];

@@ -1,7 +1,7 @@
 import React from 'react';
 import './Welcome.css';
 
-function Welcome({ onLogin, onSignup, onDemo, onContinue }) {
+function Welcome({ onLogin, onSignup, onDemo, onContinue, onAdmin }) {
   const highlights = [
     'Zero-trust encryption pipeline',
     'Biometric and password access layers',
@@ -109,6 +109,9 @@ function Welcome({ onLogin, onSignup, onDemo, onContinue }) {
             </button>
             <button className="access-btn secondary" onClick={handleSignup}>
               Sign Up
+            </button>
+            <button className="access-btn tertiary" onClick={() => onAdmin && onAdmin()} style={{ marginLeft: 8 }}>
+              Admin
             </button>
           </div>
 
