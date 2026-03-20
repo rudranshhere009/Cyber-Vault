@@ -633,7 +633,6 @@ function App() {
   }, []);
   const { session, saveSession, clearSession, sessionLoaded } = useSession();
   const [profileOpen, setProfileOpen] = useState(false);
-  const [theme, setTheme] = useState('night');
   const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', confirmText: 'Confirm', cancelText: 'Cancel', onConfirm: null });
   const [exportState, setExportState] = useState({ open: false, file: null, recommended: 'text' });
   const [avatarCrop, setAvatarCrop] = useState({ open: false, src: '', zoom: 1, rotation: 0, imgW: 0, imgH: 0 });
@@ -703,10 +702,14 @@ function App() {
     setComplianceStatus({});
   }, []);
 
+  const demoSkipRef = useRef(null);
   const startDemoMode = useCallback(async () => {
     setDemoSplashOpen(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await new Promise((resolve) => {
+        // Only resolves when user clicks "Enter CyberVault"
+        demoSkipRef.current = resolve;
+      });
       await clearDemoSessionArtifacts('demo@cybervault.local', []);
       const demoSession = {
         email: 'demo@cybervault.local',
@@ -728,7 +731,8 @@ function App() {
       setPage('vault');
       showNotification('> demo.mode.active.one.file.limit.enabled', 'info');
     } finally {
-      setDemoSplashOpen(false);
+      demoSkipRef.current = null;
+      // splash unmounts itself via onDone after exit animation
     }
   }, [saveSession, clearDemoSessionArtifacts]);
   const [missionOpen, setMissionOpen] = useState(false);
@@ -833,15 +837,6 @@ function App() {
   const [dbInsights, setDbInsights] = useState({ users: [], logins: [], files: [] });
 
   useEffect(() => {
-    if (theme === 'night') {
-      document.body.classList.add('theme-night');
-    } else {
-      document.body.classList.remove('theme-night');
-    }
-    localStorage.setItem('cvTheme', theme);
-  }, [theme]);
-
-  useEffect(() => {
     if (!session) return;
     if (session.demo) {
       setProfile(buildDefaultProfile({
@@ -861,6 +856,11 @@ function App() {
       return next;
     });
   }, [session]);
+
+  useEffect(() => {
+    document.body.classList.toggle('app-shell-mode', page === 'vault');
+    return () => document.body.classList.remove('app-shell-mode');
+  }, [page]);
 
   useEffect(() => {
     if (session?.demo) return;
@@ -2078,8 +2078,6 @@ function App() {
         setPage('login');
         setMode('login');
         setLocked(false);
-        setTheme('night');
-        localStorage.setItem('cvTheme', 'night');
         // Reset form states
         setLoginEmail('');
         setLoginPassword('');
@@ -2730,6 +2728,15 @@ function App() {
   const fileCount = files.length;
   const totalBytes = files.reduce((sum, f) => sum + (f.size || 0), 0);
   const isStorageEmpty = fileCount === 0;
+  const sidebarStorageCapacity = Math.max(512 * 1024, Math.ceil(totalBytes * 1.6));
+  const sidebarStorageFillPct = isStorageEmpty ? 0 : Math.min(100, Math.max(12, Math.round((totalBytes / sidebarStorageCapacity) * 100)));
+  const sidebarStorageStatus = isStorageEmpty
+    ? 'Empty reserve'
+    : sidebarStorageFillPct >= 78
+      ? 'Near crest'
+      : sidebarStorageFillPct >= 45
+        ? 'Steady fill'
+        : 'Plenty of headroom';
 
   const typeStats = files.reduce(
     (acc, f) => {
@@ -3267,7 +3274,12 @@ function App() {
             className="back-to-welcome-btn"
             onClick={() => setPage('welcome')}
           >
-            <span className="back-icon" aria-hidden="true">{'\u2302'}</span>
+            <span className="back-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" className="back-icon-svg">
+                <path d="M12.2 4.6 5 12l7.2 7.4" />
+                <path d="M5.6 12h12.8" />
+              </svg>
+            </span>
             <span>You wanna go back?</span>
           </button>
 
@@ -3390,7 +3402,7 @@ function App() {
                   </button>
                   <button
                     className="profile-badge"
-                    onClick={() => (session?.demo ? handleRestrictedDemoFeature('Profile Center') : setProfileOpen(true))}
+                    onClick={() => setProfileOpen(true)}
                     aria-label="Open profile settings"
                   >
                     <span className="profile-avatar" style={{ '--accent': profile.accent }}>
@@ -3450,13 +3462,31 @@ function App() {
 
                   <div className="cyber-section">
                     <div className="neural-stats">
-                      <div className="neural-stat">
-                        <span className="stat-number" id="fileCount">{fileCount}</span>
-                        <span className="stat-label">Files</span>
+                      <div className="neural-stat files-stat">
+                        <div className="file-vault-shell">
+                          <div className="file-vault-core">
+                            <span className="file-vault-value" id="fileCount">{fileCount}</span>
+                            <span className="file-vault-unit">{fileCount === 1 ? 'file' : 'files'}</span>
+                          </div>
+                          <div className="file-vault-meta">
+                            <div className="stat-label">Encrypted files</div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="neural-stat">
-                        <span className="stat-number" id="totalSize">{formatFileSize(totalBytes)}</span>
-                        <span className="stat-label">Storage</span>
+                      <div className="neural-stat storage-reservoir-card">
+                        <div className="storage-reservoir-shell">
+                          <div className="storage-reservoir">
+                            <div className="storage-water" style={{ '--fill': `${sidebarStorageFillPct}%` }}>
+                              <span className="storage-water-value" id="totalSize">{formatFileSize(totalBytes)}</span>
+                            </div>
+                          </div>
+                          <div className="storage-reservoir-meta">
+                            <div className="storage-reservoir-readout">
+                              <span className="storage-reservoir-value" id="totalSizeCompact">{formatFileSize(totalBytes)}</span>
+                              <span className="storage-reservoir-unit">stored</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -3539,9 +3569,15 @@ function App() {
                     <div className="pulse-legend">Last 24h activity stream (2h slices)</div>
                   </div>
                   <div className="pulse-right">
-                    <div className="pulse-ring" style={{ '--pct': `${pulseDeck.syncScore}%` }}>
-                      <div className="pulse-ring-value">{pulseDeck.syncScore}</div>
-                      <div className="pulse-ring-label">SYNC</div>
+                    <div className="pulse-sync-card">
+                      <div className="pulse-sync-label">Trust Sync</div>
+                      <div className="pulse-sync-value">{pulseDeck.syncScore}<span>%</span></div>
+                      <div className="pulse-sync-bar" aria-label={`Trust sync ${pulseDeck.syncScore} percent`}>
+                        <span style={{ width: `${pulseDeck.syncScore}%` }}></span>
+                      </div>
+                      <div className="pulse-sync-note">
+                        {pulseDeck.syncScore >= 80 ? 'Stable alignment' : pulseDeck.syncScore >= 60 ? 'Monitoring drift' : 'Attention needed'}
+                      </div>
                     </div>
                     <div className="pulse-kpis">
                       <div className="pulse-kpi">
@@ -4247,18 +4283,7 @@ function App() {
         </div>
       )}
 
-      {demoSplashOpen && (
-        <div className="demo-entry-overlay" role="status" aria-live="polite" aria-label="Welcome to demo mode">
-          <div className="demo-entry-card">
-            <div className="demo-entry-emoji">😉</div>
-            <div className="demo-entry-title">Welcome to Demo Mode</div>
-            <div className="demo-entry-sub">Loading secure trial workspace...</div>
-            <div className="demo-entry-dots" aria-hidden="true">
-              <span></span><span></span><span></span>
-            </div>
-          </div>
-        </div>
-      )}
+      {demoSplashOpen && <DemoSplashScreen onEnter={() => demoSkipRef.current && demoSkipRef.current()} onDone={() => setDemoSplashOpen(false)} />}
 
       {locked && (
         <div className="confirm-overlay vault-lock-overlay">
@@ -4526,11 +4551,6 @@ function App() {
                     <span className="slider"></span>
                   </label>
                 </div>
-                <div className="profile-card-subtitle">Theme Control</div>
-                <div className="theme-toggle">
-                  <button className={theme === 'frost' ? 'active' : ''} onClick={() => setTheme('frost')}>Frost</button>
-                  <button className={theme === 'night' ? 'active' : ''} onClick={() => setTheme('night')}>Night Shield</button>
-                </div>
               </div>
 
               <div className="profile-card">
@@ -4655,5 +4675,439 @@ function App() {
   );
 }
 
-export default App;
+function DemoSplashScreen({ onEnter, onDone }) {
+  const TOTAL_MS = 20000;
+  const [elapsed, setElapsed] = useState(0);
+  const [slide, setSlide] = useState(0);       // 0=loading, 1=feature1, 2=feature2, 3=feature3, 4=ready
+  const [slideOut, setSlideOut] = useState(false);
+  const [cardIn, setCardIn] = useState(false);
+  const [exiting, setExiting] = useState(false);
+  const startRef = useRef(Date.now());
+  const rafRef = useRef(null);
+  const hexCanvasRef = useRef(null);
 
+  // Hex grid canvas animation
+  useEffect(() => {
+    const canvas = hexCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let animId;
+    let t = 0;
+
+    function resize() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Hex geometry — smaller on mobile for performance
+    const isMobile = window.innerWidth < 600;
+    const HEX_SIZE = isMobile ? 22 : 34;
+    const HEX_GAP  = isMobile ? 2 : 3;
+    const W  = HEX_SIZE * 2 + HEX_GAP;
+    const H  = Math.sqrt(3) * HEX_SIZE + HEX_GAP;
+
+    // Pre-build flat-top hex path helper
+    function hexPath(cx, cy, r) {
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const ang = (Math.PI / 3) * i - Math.PI / 6;
+        const x = cx + r * Math.cos(ang);
+        const y = cy + r * Math.sin(ang);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+    }
+
+    // Pulse nodes: each has a lifetime cycle
+    const PULSE_COUNT = isMobile ? 4 : 8;
+    const pulses = Array.from({ length: PULSE_COUNT }, (_, i) => ({
+      col: Math.floor(Math.random() * 24),
+      row: Math.floor(Math.random() * 18),
+      phase: (i / PULSE_COUNT) * Math.PI * 2,
+      speed: 0.6 + Math.random() * 0.8,
+    }));
+
+    // Data-stream lines: random hex-to-hex connections that animate
+    const STREAMS = Array.from({ length: isMobile ? 6 : 14 }, () => ({
+      col: Math.floor(Math.random() * 24),
+      row: Math.floor(Math.random() * 18),
+      dir: Math.floor(Math.random() * 6),
+      progress: Math.random(),
+      speed: 0.004 + Math.random() * 0.006,
+    }));
+
+    function draw() {
+      t += 0.012;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const cols = Math.ceil(canvas.width  / (W * 0.75)) + 3;
+      const rows = Math.ceil(canvas.height / H) + 3;
+      const offsetX = (canvas.width  - cols * W * 0.75) / 2;
+      const offsetY = (canvas.height - rows * H)        / 2;
+
+      // Draw all hexes
+      for (let col = -1; col < cols; col++) {
+        for (let row = -1; row < rows; row++) {
+          const cx = offsetX + col * W * 0.75;
+          const cy = offsetY + row * H + (col % 2 === 0 ? 0 : H * 0.5);
+
+          // Distance from center for ambient glow
+          const dx = cx - canvas.width  * 0.5;
+          const dy = cy - canvas.height * 0.5;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const maxDist = Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height) * 0.5;
+          const proximity = 1 - Math.min(dist / maxDist, 1);
+
+          // Pulse brightness from nearby pulse nodes
+          let pulseBrightness = 0;
+          for (const p of pulses) {
+            const px = offsetX + p.col * W * 0.75;
+            const py = offsetY + p.row * H + (p.col % 2 === 0 ? 0 : H * 0.5);
+            const pdx = cx - px; const pdy = cy - py;
+            const pd = Math.sqrt(pdx * pdx + pdy * pdy);
+            const wave = Math.sin(t * p.speed - pd * 0.045 + p.phase);
+            pulseBrightness = Math.max(pulseBrightness, Math.max(0, wave) * Math.max(0, 1 - pd / 200));
+          }
+
+          const alpha = 0.028 + proximity * 0.055 + pulseBrightness * 0.22;
+
+          // Hex fill
+          hexPath(cx, cy, HEX_SIZE - 1.5);
+          ctx.fillStyle = `rgba(180,90,10,${alpha * 0.35})`;
+          ctx.fill();
+
+          // Hex stroke
+          const strokeAlpha = 0.06 + proximity * 0.10 + pulseBrightness * 0.55;
+          ctx.strokeStyle = `rgba(255,${140 + pulseBrightness * 80},${20 + pulseBrightness * 40},${strokeAlpha})`;
+          ctx.lineWidth = 0.7 + pulseBrightness * 0.9;
+          ctx.stroke();
+
+          // Bright node dot at center for pulsed cells
+          if (pulseBrightness > 0.55) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, 1.8 + pulseBrightness * 2, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255,${160 + pulseBrightness * 90},60,${pulseBrightness * 0.9})`;
+            ctx.fill();
+          }
+        }
+      }
+
+      // Draw data streams: animated lines between adjacent hex centers
+      const DIR_ANGLES = [0, 60, 120, 180, 240, 300].map(d => d * Math.PI / 180);
+      for (const s of STREAMS) {
+        s.progress += s.speed;
+        if (s.progress > 1) {
+          s.progress = 0;
+          s.col = Math.floor(Math.random() * cols);
+          s.row = Math.floor(Math.random() * rows);
+          s.dir = Math.floor(Math.random() * 6);
+        }
+        const sx = offsetX + s.col * W * 0.75;
+        const sy = offsetY + s.row * H + (s.col % 2 === 0 ? 0 : H * 0.5);
+        const ex = sx + Math.cos(DIR_ANGLES[s.dir]) * W * 0.75;
+        const ey = sy + Math.sin(DIR_ANGLES[s.dir]) * H;
+        const lx = sx + (ex - sx) * s.progress;
+        const ly = sy + (ey - sy) * s.progress;
+
+        // Glowing dot traveling along the edge
+        ctx.beginPath();
+        ctx.arc(lx, ly, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,180,60,0.85)`;
+        ctx.fill();
+
+        // Tail trail
+        const grad = ctx.createLinearGradient(sx, sy, lx, ly);
+        grad.addColorStop(0,   'rgba(255,140,30,0)');
+        grad.addColorStop(0.6, 'rgba(255,160,50,0.15)');
+        grad.addColorStop(1,   'rgba(255,200,80,0.5)');
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(lx, ly);
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+
+      animId = requestAnimationFrame(draw);
+    }
+
+    draw();
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+
+  // Slide schedule (ms from start)
+  const SLIDES = [
+    { at: 0,     id: 'loading' },
+    { at: 4500,  id: 'feature-vault' },
+    { at: 9000,  id: 'feature-security' },
+    { at: 13500, id: 'feature-access' },
+    { at: 17500, id: 'ready' },
+  ];
+
+  // Progress ticks
+  useEffect(() => {
+    const tick = () => {
+      const e = Date.now() - startRef.current;
+      setElapsed(Math.min(e, TOTAL_MS));
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  // Slide transitions
+  useEffect(() => {
+    const timers = [];
+    SLIDES.forEach((s, i) => {
+      if (i === 0) { setTimeout(() => setCardIn(true), 80); return; }
+      timers.push(setTimeout(() => {
+        setSlideOut(true);
+        setTimeout(() => {
+          setSlide(i);
+          setSlideOut(false);
+        }, 420);
+      }, s.at));
+    });
+    // No auto-exit — user must click Enter CyberVault
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  const progress = Math.min((elapsed / TOTAL_MS) * 100, 100);
+  const currentSlide = SLIDES[slide];
+
+  const handleSkip = () => {
+    onEnter();                          // triggers session + page state immediately
+    setSlideOut(true);
+    setTimeout(() => {
+      setExiting(true);
+      setTimeout(() => onDone(), 380); // unmount only after exit animation done
+    }, 420);
+  };
+
+  // Loading step data (only for slide 0)
+  const LOAD_STEPS = [
+    { label: 'Initializing sandbox environment', sub: 'Isolated from production data', ms: 0 },
+    { label: 'Generating guest session token', sub: 'Cryptographically signed trial key', ms: 1400 },
+    { label: 'Mounting demo file system', sub: 'One-file upload limit activated', ms: 2800 },
+    { label: 'Applying access restrictions', sub: 'Biometrics, exports & sharing locked', ms: 3800 },
+  ];
+  const [stepsDone, setStepsDone] = useState(0);
+  useEffect(() => {
+    const timers = LOAD_STEPS.map((s, i) =>
+      setTimeout(() => setStepsDone(i + 1), s.ms + 300)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  // Feature slides content
+  const FEATURES = [
+    {
+      id: 'feature-vault',
+      icon: (
+        <svg viewBox="0 0 40 40" fill="none" className="demo-feat-icon-svg">
+          <rect x="4" y="10" width="32" height="26" rx="4" stroke="currentColor" strokeWidth="1.8"/>
+          <path d="M13 10V7a7 7 0 0 1 14 0v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+          <circle cx="20" cy="23" r="4" stroke="currentColor" strokeWidth="1.8"/>
+          <path d="M20 27v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+        </svg>
+      ),
+      eyebrow: 'FEATURE 01 — VAULT',
+      headline: 'Upload & encrypt files instantly',
+      body: 'In demo mode you can upload one file and see end-to-end AES-256 encryption happen in real time — right in your browser, zero server uploads.',
+      pills: ['AES-256 encryption', 'Client-side only', 'Zero cloud exposure'],
+      note: 'Demo limit: 1 file upload. Full plan: unlimited.',
+    },
+    {
+      id: 'feature-security',
+      icon: (
+        <svg viewBox="0 0 40 40" fill="none" className="demo-feat-icon-svg">
+          <path d="M20 4L5 11v10c0 9.39 6.56 18.16 15 20 8.44-1.84 15-10.61 15-20V11L20 4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
+          <path d="M14 20l4.5 4.5 7.5-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      eyebrow: 'FEATURE 02 — SECURITY',
+      headline: 'Black-box threat detection engine',
+      body: 'The live anomaly scanner watches every action and surfaces suspicious patterns. In demo mode you get read access to the full threat log and activity feed.',
+      pills: ['Live anomaly feed', 'Activity timeline', 'Risk scoring'],
+      note: 'Demo limit: view-only. Full plan: configure alert rules.',
+    },
+    {
+      id: 'feature-access',
+      icon: (
+        <svg viewBox="0 0 40 40" fill="none" className="demo-feat-icon-svg">
+          <circle cx="20" cy="14" r="6" stroke="currentColor" strokeWidth="1.8"/>
+          <path d="M6 36c0-7.73 6.27-14 14-14s14 6.27 14 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+          <circle cx="32" cy="12" r="4" stroke="currentColor" strokeWidth="1.5"/>
+          <path d="M30.5 12h3M32 10.5v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      ),
+      eyebrow: 'FEATURE 03 — ACCESS',
+      headline: 'Biometric auth & role management',
+      body: 'CyberVault supports face recognition, iris scan and fingerprint unlock. Demo mode lets you explore the UI flows — biometric write is locked for security.',
+      pills: ['Face ID / Iris / Fingerprint', 'Role-based permissions', 'Device trust scoring'],
+      note: 'Demo limit: no biometric registration. Full plan: full auth suite.',
+    },
+  ];
+
+  const featureData = FEATURES.find(f => f.id === currentSlide?.id);
+
+  return (
+    <div className={`demo-entry-overlay${exiting ? ' demo-entry-overlay--exit' : ''}`} role="status" aria-live="polite">
+
+      {/* Cyber hex grid canvas background */}
+      <canvas className="demo-hex-canvas" ref={hexCanvasRef} aria-hidden="true" />
+      <div className="demo-vignette" aria-hidden="true" />
+
+      <div className={`demo-entry-card demo-entry-card--v2${cardIn ? ' demo-entry-card--visible' : ''}${slideOut ? ' demo-entry-card--slideout' : ''}`}>
+
+        {/* Animated corner accents */}
+        <div className="demo-corner demo-corner--tl" aria-hidden="true" />
+        <div className="demo-corner demo-corner--tr" aria-hidden="true" />
+        <div className="demo-corner demo-corner--bl" aria-hidden="true" />
+        <div className="demo-corner demo-corner--br" aria-hidden="true" />
+
+        {/* Glow orbs */}
+        <div className="demo-entry-glow demo-entry-glow--tl" aria-hidden="true" />
+        <div className="demo-entry-glow demo-entry-glow--br" aria-hidden="true" />
+
+        {/* Header row */}
+        <div className="demo-entry-header-row">
+          <div className="demo-entry-badge">
+            <span className="demo-entry-badge-dot" />
+            DEMO MODE
+          </div>
+          <div className="demo-entry-badge demo-entry-badge--ghost">
+            <svg viewBox="0 0 14 14" fill="none" width="10" height="10" style={{marginRight:3}}>
+              <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3"/>
+              <path d="M7 4.5v3l2 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+            </svg>
+            {Math.max(0, Math.ceil((20000 - elapsed) / 1000))}s
+          </div>
+        </div>
+
+        {/* ── SLIDE 0: LOADING ── */}
+        {slide === 0 && (
+          <div className="demo-slide demo-slide--loading">
+            <div className="demo-entry-icon-wrap">
+              <svg className="demo-entry-shield" viewBox="0 0 48 48" fill="none">
+                <path d="M24 4L6 12V24C6 33.94 14.06 43.28 24 46C33.94 43.28 42 33.94 42 24V12L24 4Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+                <path d="M17 24L22 29L31 19" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ strokeDasharray: 22, strokeDashoffset: stepsDone >= 4 ? 0 : 22, transition: 'stroke-dashoffset 0.45s ease 0.1s', stroke: stepsDone >= 4 ? '#5cdf8a' : 'currentColor' }} />
+              </svg>
+              <div className="demo-entry-icon-ring demo-entry-icon-ring--1" />
+              <div className="demo-entry-icon-ring demo-entry-icon-ring--2" />
+            </div>
+            <div className="demo-entry-title demo-entry-title--v2">Preparing Your Workspace</div>
+            <div className="demo-entry-sub demo-entry-sub--v2">No signup needed — instant secure preview</div>
+
+            <div className="demo-entry-steps">
+              {LOAD_STEPS.map((step, i) => {
+                const done = stepsDone > i;
+                const active = stepsDone === i;
+                return (
+                  <div key={i} className={`demo-entry-step${done ? ' demo-entry-step--done' : active ? ' demo-entry-step--active' : ' demo-entry-step--pending'}`}>
+                    {i < LOAD_STEPS.length - 1 && <div className="demo-step-connector" />}
+                    <div className="demo-entry-step-icon">
+                      {done ? (
+                        <svg viewBox="0 0 16 16" fill="none" width="12" height="12">
+                          <path d="M3 8L6.5 11.5L13 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      ) : active ? <span className="demo-step-spinner" /> : <span className="demo-step-num">{i + 1}</span>}
+                    </div>
+                    <div className="demo-entry-step-body">
+                      <div className="demo-entry-step-label">{step.label}</div>
+                      <div className="demo-entry-step-desc">{step.sub}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── SLIDES 1-3: FEATURES ── */}
+        {featureData && (
+          <div className="demo-slide demo-slide--feature">
+            <div className="demo-feat-icon-wrap">
+              {featureData.icon}
+              <div className="demo-feat-icon-bg" />
+            </div>
+            <div className="demo-feat-eyebrow">{featureData.eyebrow}</div>
+            <div className="demo-feat-headline">{featureData.headline}</div>
+            <div className="demo-feat-body">{featureData.body}</div>
+            <div className="demo-feat-pills">
+              {featureData.pills.map(p => <span key={p} className="demo-feat-pill">{p}</span>)}
+            </div>
+            <div className="demo-feat-note">
+              <svg viewBox="0 0 16 16" fill="none" width="12" height="12" style={{ flexShrink: 0, marginTop: 1 }}>
+                <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4"/>
+                <path d="M8 7v4M8 5.5v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              </svg>
+              {featureData.note}
+            </div>
+          </div>
+        )}
+
+        {/* ── SLIDE 4: READY ── */}
+        {slide === 4 && (
+          <div className="demo-slide demo-slide--ready">
+            <div className="demo-ready-icon">
+              <svg viewBox="0 0 56 56" fill="none" width="56" height="56">
+                <circle cx="28" cy="28" r="26" stroke="#5cdf8a" strokeWidth="1.8"/>
+                <path d="M18 28L24.5 34.5L38 21" stroke="#5cdf8a" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="demo-ready-check"/>
+              </svg>
+              <div className="demo-ready-ring demo-ready-ring--1" />
+              <div className="demo-ready-ring demo-ready-ring--2" />
+            </div>
+            <div className="demo-feat-headline" style={{ color: '#e0ffe8', marginBottom: 8 }}>You're all set</div>
+            <div className="demo-entry-sub demo-entry-sub--v2" style={{ marginBottom: 24 }}>Your sandboxed workspace is ready to explore</div>
+            <div className="demo-ready-caps">
+              {[
+                ['1 file upload', 'Try real encryption'],
+                ['Threat log access', 'Read-only live feed'],
+                ['Full UI preview', 'No login required'],
+                ['Instant exit', 'Zero data retained'],
+              ].map(([a, b]) => (
+                <div key={a} className="demo-ready-cap">
+                  <svg viewBox="0 0 14 14" fill="none" width="11" height="11" style={{ flexShrink: 0, marginTop: 2 }}>
+                    <path d="M2 7L5.5 10.5L12 3.5" stroke="#5cdf8a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span><strong>{a}</strong> — {b}</span>
+                </div>
+              ))}
+            </div>
+            <button className="demo-enter-btn" onClick={handleSkip}>
+              Enter CyberVault
+              <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
+                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {/* Progress bar */}
+        <div className="demo-entry-progress-wrap">
+          <div className="demo-entry-progress-fill" style={{ width: `${progress}%` }} />
+          <div className="demo-progress-glow" style={{ left: `${progress}%` }} />
+        </div>
+
+        {/* Slide dots + footer */}
+        <div className="demo-entry-footer">
+          <span className="demo-entry-footer-code">CYBERVAULT // TRIAL SESSION</span>
+          <div className="demo-slide-dots">
+            {SLIDES.map((_, i) => (
+              <span key={i} className={`demo-dot${slide === i ? ' demo-dot--active' : slide > i ? ' demo-dot--done' : ''}`} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default App;
