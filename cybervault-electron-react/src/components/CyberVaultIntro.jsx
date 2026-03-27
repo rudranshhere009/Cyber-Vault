@@ -67,6 +67,7 @@ const Intro = ({ onComplete, onStartTransition, forceMotion = false }) => {
       <div className="cv-bg">
         <div className="cv-grid" />
         <div className="cv-radial" />
+        <div className="cv-matrix" aria-hidden="true" />
         {[...Array(18)].map((_, i) => (
           <span
             key={i}

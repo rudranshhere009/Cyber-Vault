@@ -13,7 +13,7 @@
   --head: 'Cinzel', serif;
   --body: 'Outfit','Space Grotesk','Segoe UI',sans-serif;
   --ribbon-h: 28px;
-  --ribbon-w: 34px;
+  --ribbon-w: 22px;
 }
 
 *, *::before, *::after {
@@ -74,6 +74,48 @@
 
 .cv-loaded .cv-radial {
   opacity: 1;
+}
+
+.cv-matrix {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.18;
+  mix-blend-mode: screen;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 255, 160, 0.06) 0 1px,
+      transparent 1px 28px
+    ),
+    repeating-linear-gradient(
+      180deg,
+      rgba(0, 255, 160, 0.12) 0 10px,
+      transparent 10px 36px
+    );
+  background-size: 28px 100%, 100% 36px;
+  animation: matrixFall 14s linear infinite;
+  filter: blur(0.2px);
+}
+
+.cv-matrix::after {
+  content: '';
+  position: absolute;
+  inset: -10% 0;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(120, 255, 210, 0.08) 0 1px,
+      transparent 1px 34px
+    ),
+    repeating-linear-gradient(
+      180deg,
+      rgba(120, 255, 210, 0.1) 0 8px,
+      transparent 8px 42px
+    );
+  background-size: 34px 100%, 100% 42px;
+  animation: matrixFall 20s linear infinite reverse;
+  opacity: 0.4;
 }
 
 .cv-particle {
@@ -230,15 +272,17 @@
 
 .cv-ribbon--left .cv-ribbon-track {
   flex-direction: column;
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
+  align-items: center;
+  gap: 12px;
+  height: max-content;
   animation: scrollTTB linear infinite;
 }
 
 .cv-ribbon--right .cv-ribbon-track {
   flex-direction: column;
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
+  align-items: center;
+  gap: 12px;
+  height: max-content;
   animation: scrollBTT linear infinite;
 }
 
@@ -255,11 +299,15 @@
   gap: 10px;
 }
 
-@media (max-width: 720px) {
-  :root {
-    --ribbon-w: 24px;
-  }
-}
+ .cv-ribbon--left .cv-ribbon-item,
+ .cv-ribbon--right .cv-ribbon-item {
+  padding: 10px 0;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  line-height: 1;
+ }
 
 .cv-ribbon-sep {
   color: rgba(255, 154, 60, 0.28);
@@ -277,12 +325,12 @@
 
 .cv-scene {
   position: relative;
-  width: min(92vw, 1020px);
+  width: min(96vw, 1180px);
   height: min(52vh, 440px);
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 0 28px;
+  gap: 0 56px;
 }
 
 .cv-panel {
@@ -309,9 +357,9 @@
   background: rgba(255, 154, 60, 0.04);
   border: 1px solid rgba(255, 154, 60, 0.14);
   border-right: 2px solid rgba(255, 154, 60, 0.06);
-  width: 210px;
-  min-width: 210px;
-  max-width: 210px;
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
   opacity: 0;
   animation: cardInL 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) calc(0.8s + var(--di) * 0.13s) forwards;
   transition: background 0.25s, border-color 0.25s;
@@ -325,9 +373,9 @@
 .cv-card--r {
   border-right: 1px solid rgba(255, 154, 60, 0.14);
   border-left: 2px solid rgba(255, 154, 60, 0.06);
-  width: 210px;
-  min-width: 210px;
-  max-width: 210px;
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
   animation-name: cardInR;
 }
 
@@ -347,7 +395,7 @@
 }
 
 .cv-card-icon {
-  font-size: 1rem;
+  font-size: 1.18rem;
   color: var(--or-lt);
   text-shadow: 0 0 12px var(--or-gl);
   flex-shrink: 0;
@@ -370,7 +418,7 @@
 
 .cv-card-title {
   font-family: var(--body);
-  font-size: 0.72rem;
+  font-size: 0.88rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   color: #ffd090;
@@ -380,7 +428,7 @@
 
 .cv-card-sub {
   font-family: var(--body);
-  font-size: 0.6rem;
+  font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: 0.04em;
   color: rgba(255, 195, 120, 0.52);
@@ -643,7 +691,7 @@
   opacity: 0;
   transform: translateY(24px);
   transition: opacity 0.8s ease, transform 0.8s ease;
-  margin-top: 10px;
+  margin-top: 92px;
 }
 
 .cv-cta-wrap.cv-cta-show {
@@ -723,10 +771,10 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  font-family: var(--ui);
-  font-size: 0.78rem;
+  font-family: var(--body);
+  font-size: 0.92rem;
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   color: var(--or-lt);
   text-shadow: 0 0 12px var(--or-gl);
   transition: color 0.3s, text-shadow 0.3s;
@@ -965,32 +1013,39 @@
   100% { transform: translateY(-110px) scale(0); opacity: 0; }
 }
 
+@keyframes matrixFall {
+  0% { background-position: 0 0, 0 0; }
+  100% { background-position: 0 220px, 0 220px; }
+}
+
 @media (max-width: 900px) {
   :root { --cs: 58px; }
   .cv-card,
-  .cv-card--r { width: 185px; min-width: 185px; max-width: 185px; }
-  .cv-scene { gap: 0 14px; }
+  .cv-card--r { width: 230px; min-width: 230px; max-width: 230px; }
+  .cv-scene { gap: 0 32px; }
 }
 
 @media (max-width: 720px) {
   :root {
     --cs: 46px;
     --ribbon-h: 24px;
-    --ribbon-w: 24px;
+    --ribbon-w: 18px;
   }
 
   .cv-card,
   .cv-card--r {
-    width: 155px;
-    min-width: 155px;
-    max-width: 155px;
+    width: 190px;
+    min-width: 190px;
+    max-width: 190px;
     padding: 7px 9px;
   }
 
-  .cv-card-title { font-size: 0.66rem; }
-  .cv-card-sub { font-size: 0.56rem; }
-  .cv-scene { width: 96vw; gap: 0 8px; }
+  .cv-card-title { font-size: 0.78rem; }
+  .cv-card-sub { font-size: 0.62rem; }
+  .cv-scene { width: 96vw; gap: 0 14px; }
   .cv-conn-line { width: 12px; }
+  .cv-cta-wrap { margin-top: 60px; }
+  .cv-btn-inner { font-size: 0.86rem; }
 }
 
 @media (max-width: 540px) {
@@ -1011,8 +1066,8 @@
 
   .cv-card,
   .cv-card--r {
-    min-width: 120px;
-    max-width: 140px;
+    min-width: 130px;
+    max-width: 160px;
     border: 1px solid rgba(255, 154, 60, 0.14);
   }
 
@@ -1021,9 +1076,22 @@
   }
 
 
-  .cv-cta-wrap {
-    margin-top: 8px;
-  }
+  .cv-cta-wrap { margin-top: 28px; }
+  .cv-btn-inner { font-size: 0.82rem; }
+}
+
+@media (max-height: 720px) {
+  :root { --cs: 52px; }
+  .cv-stage { margin-top: 2vh; gap: 20px; }
+  .cv-scene { height: min(46vh, 360px); }
+  .cv-cta-wrap { margin-top: 54px; }
+}
+
+@media (max-height: 600px) {
+  :root { --cs: 46px; }
+  .cv-stage { margin-top: 1vh; gap: 16px; }
+  .cv-scene { height: min(42vh, 320px); }
+  .cv-cta-wrap { margin-top: 40px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1032,7 +1100,8 @@
   .cv-root:not(.cv-force-motion) .cv-glow-a,
   .cv-root:not(.cv-force-motion) .cv-glow-b,
   .cv-root:not(.cv-force-motion) .cv-particle,
-  .cv-root:not(.cv-force-motion) .cv-ribbon-track {
+  .cv-root:not(.cv-force-motion) .cv-ribbon-track,
+  .cv-root:not(.cv-force-motion) .cv-matrix {
     animation: none !important;
   }
 }
