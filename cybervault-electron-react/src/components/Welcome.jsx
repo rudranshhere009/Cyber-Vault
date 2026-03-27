@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import CyberVaultIntro from './CyberVaultIntro';
 import './Welcome.css';
 
 function HexCanvas() {
@@ -430,4 +431,10 @@ function LiveClock() {
 }
 
 function WelcomeWithClock(props) { return <><Welcome {...props}/><LiveClock/></>; }
-export default React.memo(WelcomeWithClock);
+function WelcomeEntry(props) {
+  const [showIntro, setShowIntro] = useState(true);
+  if (showIntro) return <CyberVaultIntro onEnter={() => setShowIntro(false)} forceMotion />;
+  return <WelcomeWithClock {...props} />;
+}
+
+export default React.memo(WelcomeEntry);
