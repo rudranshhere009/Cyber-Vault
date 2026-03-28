@@ -1,57 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './CyberVaultIntro.css';
 
-/* ── Falling matrix rain ── */
-function MatrixRain() {
-  const ref = useRef(null);
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let animId;
-    const CHARS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF';
-    const FS = 13;
-    let cols, drops, bright;
-    function init() {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-      cols  = Math.floor(canvas.width / FS);
-      drops = Array.from({ length: cols }, () => Math.random() * -(canvas.height / FS));
-      bright = new Set(Array.from({ length: Math.max(1, Math.floor(cols * 0.1)) }, () => Math.floor(Math.random() * cols)));
-    }
-    const ro = new ResizeObserver(init); ro.observe(canvas); init();
-    let frame = 0;
-    function draw() {
-      animId = requestAnimationFrame(draw);
-      if (++frame % 2 !== 0) return;
-      ctx.fillStyle = 'rgba(0,0,0,0.15)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.font = `${FS}px "Share Tech Mono",monospace`;
-      for (let i = 0; i < cols; i++) {
-        const y = drops[i] * FS;
-        const ch = CHARS[Math.floor(Math.random() * CHARS.length)];
-        if (bright.has(i)) {
-          ctx.shadowBlur = 8; ctx.shadowColor = 'rgba(255,140,30,0.85)';
-          ctx.fillStyle = 'rgba(255,210,140,0.96)';
-        } else {
-          ctx.shadowBlur = 0;
-          ctx.fillStyle = `rgba(190,95,12,${0.22 + Math.random() * 0.18})`;
-        }
-        ctx.fillText(ch, i * FS, y);
-        ctx.shadowBlur = 0;
-        drops[i] += 0.48 + Math.random() * 0.38;
-        if (drops[i] * FS > canvas.height && Math.random() > 0.974) {
-          drops[i] = Math.random() * -18;
-          Math.random() > 0.5 ? bright.add(i) : bright.delete(i);
-        }
-      }
-    }
-    draw();
-    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
-  }, []);
-  return <canvas ref={ref} className="cv-matrix-rain" aria-hidden="true" />;
-}
-
 const LEFT_FEATURES = [
   { id: 'zt', icon: '⬡', title: 'ZERO-TRUST', sub: 'Local-first shield mesh' },
   { id: 'bl', icon: '◈', title: 'BIO LOCK', sub: 'Face & fingerprint access' },
@@ -130,11 +79,10 @@ const Intro = ({ onComplete, onStartTransition, forceMotion = false }) => {
   return (
     <div className={`cv-root ${loaded ? 'cv-loaded' : ''} ${transitioning ? 'cv-opening' : ''} ${forceMotion ? 'cv-force-motion' : ''}`}>
       <div className="cv-bg">
-        <div className="cv-cyber-grid" />
-        <div className="cv-cyber-circuit" />
-        <div className="cv-cyber-scanlines" />
-        <div className="cv-cyber-sweep" />
-        <div className="cv-cyber-glitch" />
+        <div className="cv-ocean" />
+        <div className="cv-ocean-caustics" />
+        <div className="cv-ocean-waves" />
+        <div className="cv-ocean-glint" />
       </div>
       <div className="cv-veil" />
 

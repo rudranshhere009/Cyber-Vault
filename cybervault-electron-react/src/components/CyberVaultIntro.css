@@ -15,9 +15,9 @@
   --ribbon-h: 28px;
   --ribbon-w: 22px;
   --intro-bg:
-    radial-gradient(1200px 700px at 18% -12%, rgba(255, 140, 60, 0.22), transparent 58%),
-    radial-gradient(900px 520px at 88% 115%, rgba(255, 90, 0, 0.18), transparent 62%),
-    linear-gradient(180deg, #070402 0%, #030201 60%, #000 100%);
+    radial-gradient(1200px 700px at 12% -10%, rgba(255, 140, 60, 0.3), transparent 60%),
+    radial-gradient(900px 620px at 88% 120%, rgba(255, 180, 90, 0.22), transparent 62%),
+    linear-gradient(180deg, #0b0704 0%, #070503 60%, #030201 100%);
 }
 
 *, *::before, *::after {
@@ -65,66 +65,58 @@
   z-index: 1;
 }
 
-/* Cybersecurity hacker background */
-.cv-cyber-grid,
-.cv-cyber-circuit,
-.cv-cyber-scanlines,
-.cv-cyber-sweep,
-.cv-cyber-glitch {
+/* Aurora-prism background */
+.cv-ocean,
+.cv-ocean-caustics,
+.cv-ocean-waves,
+.cv-ocean-glint {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
 
-.cv-cyber-grid {
+.cv-ocean {
+  background:
+    radial-gradient(1000px 620px at 12% 8%, rgba(255, 140, 60, 0.24), transparent 60%),
+    radial-gradient(900px 700px at 82% 18%, rgba(255, 190, 90, 0.22), transparent 60%),
+    radial-gradient(800px 600px at 60% 100%, rgba(255, 120, 40, 0.18), transparent 62%),
+    linear-gradient(180deg, rgba(9, 6, 4, 0.98) 0%, rgba(6, 4, 2, 0.99) 60%, rgba(3, 2, 1, 1) 100%);
+  opacity: 1;
+}
+
+.cv-ocean-caustics {
   background-image:
-    linear-gradient(rgba(0, 255, 200, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 200, 0.08) 1px, transparent 1px);
-  background-size: 70px 70px;
-  opacity: 0.35;
+    radial-gradient(ellipse 40% 18% at 10% 30%, rgba(255, 190, 120, 0.24), transparent 60%),
+    radial-gradient(ellipse 36% 16% at 70% 20%, rgba(255, 150, 70, 0.22), transparent 62%),
+    radial-gradient(ellipse 38% 18% at 50% 70%, rgba(255, 120, 40, 0.2), transparent 65%),
+    conic-gradient(from 210deg at 30% 30%, transparent 0 20%, rgba(255, 170, 90, 0.2) 25%, transparent 35%, rgba(255, 120, 40, 0.2) 45%, transparent 60%),
+    repeating-linear-gradient(125deg, rgba(255, 190, 120, 0.1) 0 2px, transparent 2px 70px);
   mix-blend-mode: screen;
-  animation: cvGridDrift 28s linear infinite;
+  opacity: 0.6;
+  animation: cvAurora 12s ease-in-out infinite;
 }
 
-.cv-cyber-circuit {
+.cv-ocean-waves {
   background-image:
-    radial-gradient(circle at 18% 22%, rgba(0, 255, 200, 0.18) 0 2px, transparent 3px),
-    radial-gradient(circle at 42% 68%, rgba(0, 255, 200, 0.14) 0 2px, transparent 3px),
-    radial-gradient(circle at 76% 30%, rgba(0, 255, 200, 0.16) 0 2px, transparent 3px),
-    repeating-linear-gradient(90deg, rgba(0, 255, 200, 0.08) 0 1px, transparent 1px 80px),
-    repeating-linear-gradient(180deg, rgba(0, 255, 200, 0.06) 0 1px, transparent 1px 60px);
-  opacity: 0.35;
-  animation: cvCircuitPulse 6s ease-in-out infinite;
-}
-
-.cv-cyber-scanlines {
-  background-image: repeating-linear-gradient(
-    180deg,
-    rgba(0, 255, 200, 0.06) 0px,
-    rgba(0, 0, 0, 0) 2px,
-    rgba(0, 0, 0, 0) 6px
-  );
-  opacity: 0.5;
+    repeating-linear-gradient(
+      180deg,
+      rgba(255, 200, 140, 0.08) 0px,
+      rgba(0, 0, 0, 0) 3px,
+      rgba(0, 0, 0, 0) 10px
+    );
+  opacity: 0.4;
   mix-blend-mode: screen;
-  animation: cvScanLines 7s linear infinite;
+  animation: cvPrismLines 8s linear infinite;
 }
 
-.cv-cyber-sweep {
-  background: linear-gradient(115deg, transparent 32%, rgba(0, 255, 200, 0.18) 50%, transparent 68%);
-  opacity: 0.55;
+.cv-ocean-glint {
+  background:
+    linear-gradient(120deg, transparent 30%, rgba(255, 220, 170, 0.18) 50%, transparent 70%),
+    linear-gradient(100deg, transparent 35%, rgba(255, 170, 90, 0.22) 50%, transparent 65%);
+  opacity: 0.65;
   mix-blend-mode: screen;
   transform: translateX(-120%);
-  animation: cvSweep 10s ease-in-out infinite;
-}
-
-.cv-cyber-glitch {
-  background-image:
-    linear-gradient(0deg, transparent 0%, rgba(255, 140, 40, 0.12) 48%, transparent 52%),
-    linear-gradient(0deg, transparent 0%, rgba(0, 255, 200, 0.1) 30%, transparent 31%);
-  background-size: 100% 140px, 100% 220px;
-  opacity: 0.35;
-  mix-blend-mode: screen;
-  animation: cvGlitchShift 3.8s steps(2, end) infinite;
+  animation: cvPrismSweep 10s ease-in-out infinite;
 }
 
 .cv-grid {
@@ -160,31 +152,21 @@
   display: none;
 }
 
-@keyframes cvGridDrift {
+@keyframes cvAurora {
+  0%   { opacity: 0.35; background-position: 0% 0%; }
+  50%  { opacity: 0.7;  background-position: 60% 40%; }
+  100% { opacity: 0.4;  background-position: 0% 0%; }
+}
+
+@keyframes cvPrismLines {
   from { background-position: 0 0; }
-  to { background-position: 140px 210px; }
+  to { background-position: 0 90px; }
 }
 
-@keyframes cvCircuitPulse {
-  0%, 100% { opacity: 0.22; }
-  50% { opacity: 0.55; }
-}
-
-@keyframes cvScanLines {
-  from { background-position: 0 0; }
-  to { background-position: 0 60px; }
-}
-
-@keyframes cvSweep {
+@keyframes cvPrismSweep {
   0% { transform: translateX(-120%); }
   45% { transform: translateX(120%); }
   100% { transform: translateX(120%); }
-}
-
-@keyframes cvGlitchShift {
-  0% { transform: translateY(-6px); }
-  50% { transform: translateY(6px); }
-  100% { transform: translateY(-6px); }
 }
 
 .cv-matrix {
@@ -358,6 +340,18 @@
 .cv-ribbon--left::after { bottom: 0; left: 0; }
 .cv-ribbon--right::before { top: 0; right: 0; }
 .cv-ribbon--right::after { bottom: 0; right: 0; }
+
+/* Remove tiny corner ticks that look misaligned on edges */
+.cv-ribbon--top::before,
+.cv-ribbon--top::after,
+.cv-ribbon--bottom::before,
+.cv-ribbon--bottom::after,
+.cv-ribbon--left::before,
+.cv-ribbon--left::after,
+.cv-ribbon--right::before,
+.cv-ribbon--right::after {
+  display: none;
+}
 
 .cv-ribbon-track {
   display: flex;
@@ -1110,82 +1104,168 @@
 @media (max-width: 900px) {
   :root { --cs: 58px; }
   .cv-card,
-  .cv-card--r { width: 230px; min-width: 230px; max-width: 230px; }
-  .cv-scene { gap: 0 32px; }
+  .cv-card--r { width: 220px; min-width: 220px; max-width: 220px; }
+  .cv-scene { gap: 0 24px; }
 }
 
 @media (max-width: 720px) {
   :root {
-    --cs: 46px;
-    --ribbon-h: 24px;
+    --cs: 44px;
+    --ribbon-h: 22px;
     --ribbon-w: 18px;
   }
 
+  .cv-stage { margin-top: 3vh; gap: 16px; }
+
   .cv-card,
   .cv-card--r {
-    width: 190px;
-    min-width: 190px;
-    max-width: 190px;
+    width: 170px;
+    min-width: 170px;
+    max-width: 170px;
     padding: 7px 9px;
+    gap: 7px;
   }
 
-  .cv-card-title { font-size: 0.78rem; }
-  .cv-card-sub { font-size: 0.62rem; }
-  .cv-scene { width: 96vw; gap: 0 14px; }
-  .cv-conn-line { width: 12px; }
-  .cv-cta-wrap { margin-top: 60px; }
-  .cv-btn-inner { font-size: 0.86rem; }
-  .cv-matrix-col { font-size: 0.6rem; letter-spacing: 0.1em; }
-  .cv-matrix-col:nth-child(n+7) { display: none; }
+  .cv-card-title { font-size: 0.74rem; letter-spacing: 0.08em; }
+  .cv-card-sub { font-size: 0.6rem; }
+  .cv-scene { width: 98vw; gap: 0 10px; }
+  .cv-conn-line { width: 10px; }
+  .cv-cta-wrap { margin-top: 50px; }
+  .cv-btn { width: 240px; height: 48px; }
+  .cv-btn-inner { font-size: 0.84rem; gap: 8px; }
+  .cv-title { font-size: clamp(1.6rem, 5.5vw, 2.6rem); }
 }
 
-@media (max-width: 540px) {
-  :root { --cs: 40px; }
+/* Mobile portrait — stack layout vertically */
+@media (max-width: 560px) {
+  :root {
+    --cs: 44px;
+    --ribbon-h: 20px;
+    --ribbon-w: 16px;
+  }
+
+  .cv-root {
+    height: 100svh;
+    justify-content: center;
+    padding: 6px 0 8px;
+  }
+
+  .cv-stage {
+    margin-top: 0;
+    gap: 10px;
+    width: 100%;
+    padding: 0 8px;
+    box-sizing: border-box;
+    flex: 1;
+    justify-content: center;
+  }
+
   .cv-scene {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;
     justify-items: center;
+    width: 100%;
+    height: auto;
     gap: 10px 0;
   }
+
+  /* Cube goes first on mobile */
+  .cv-cube-wrap { order: -1; }
 
   .cv-panel {
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 7px;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .cv-panel--left,
+  .cv-panel--right {
+    align-items: center;
   }
 
   .cv-card,
   .cv-card--r {
-    min-width: 130px;
+    min-width: 0;
+    width: calc(50% - 8px);
     max-width: 160px;
-    border: 1px solid rgba(255, 154, 60, 0.14);
+    padding: 7px 8px;
+    gap: 6px;
+    border: 1px solid rgba(255, 154, 60, 0.18);
   }
 
-  .cv-card-connector {
+  /* Hide connectors on mobile — no room */
+  .cv-card-connector,
+  .cv-card-connector--r {
     display: none;
   }
 
+  .cv-card-stripe,
+  .cv-card-stripe--r {
+    width: 2px;
+  }
 
-  .cv-cta-wrap { margin-top: 28px; }
-  .cv-btn-inner { font-size: 0.82rem; }
-  .cv-matrix-col:nth-child(n+5) { display: none; }
+  .cv-card-title { font-size: 0.7rem; letter-spacing: 0.06em; white-space: normal; }
+  .cv-card-sub   { font-size: 0.58rem; white-space: normal; }
+  .cv-card-icon  { font-size: 1rem; width: 16px; }
+
+  .cv-title { font-size: clamp(1.5rem, 6.8vw, 2.3rem); letter-spacing: 0.04em; }
+  .cv-title-block { margin-top: 6px; }
+
+  .cv-cta-wrap { margin-top: 4px; margin-bottom: 0; }
+  .cv-btn { width: 220px; height: 46px; }
+  .cv-btn-inner { font-size: 0.8rem; gap: 7px; }
+  .cv-btn-label { font-size: 0.8rem; }
+
+  /* Fewer matrix rain streams on very small screens handled by canvas logic */
+  .cv-cube-wrap {
+    width: calc(var(--cs) * 2.8 + 40px);
+    height: calc(var(--cs) * 2.8 + 40px);
+    margin-top: -10px;
+  }
 }
 
+/* Very small phones */
+@media (max-width: 375px) {
+  :root { --cs: 32px; }
+
+  .cv-card,
+  .cv-card--r {
+    width: calc(50% - 6px);
+    max-width: 145px;
+    padding: 6px 7px;
+  }
+
+  .cv-title { font-size: clamp(1.2rem, 7vw, 1.8rem); }
+  .cv-btn { width: 200px; height: 44px; }
+  .cv-btn-inner { font-size: 0.76rem; }
+}
+
+/* Short screens (landscape mobile) */
 @media (max-height: 720px) {
   :root { --cs: 52px; }
-  .cv-stage { margin-top: 2vh; gap: 20px; }
-  .cv-scene { height: min(46vh, 360px); }
-  .cv-cta-wrap { margin-top: 54px; }
-  .cv-matrix-col { font-size: 0.62rem; }
+  .cv-stage { margin-top: 2vh; gap: 16px; }
+  .cv-scene { height: min(46vh, 340px); }
+  .cv-cta-wrap { margin-top: 40px; }
 }
 
 @media (max-height: 600px) {
-  :root { --cs: 46px; }
-  .cv-stage { margin-top: 1vh; gap: 16px; }
-  .cv-scene { height: min(42vh, 320px); }
-  .cv-cta-wrap { margin-top: 40px; }
-  .cv-matrix-col { font-size: 0.6rem; }
+  :root { --cs: 42px; }
+  .cv-stage { margin-top: 1vh; gap: 10px; }
+  .cv-scene { height: min(42vh, 300px); }
+  .cv-cta-wrap { margin-top: 28px; }
+  .cv-title { font-size: clamp(1.3rem, 3.5vw, 2rem); }
+  .cv-btn { height: 44px; }
+}
+
+@media (max-height: 500px) {
+  :root { --cs: 36px; }
+  .cv-stage { gap: 8px; margin-top: 1vh; }
+  .cv-scene { height: auto; }
+  .cv-panel { display: none; } /* hide side cards on very short landscape */
+  .cv-cta-wrap { margin-top: 18px; }
+  .cv-title { font-size: clamp(1.1rem, 3vw, 1.6rem); }
 }
 
 @media (prefers-reduced-motion: reduce) {

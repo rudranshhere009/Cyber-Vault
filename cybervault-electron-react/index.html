@@ -52,7 +52,7 @@
       }
       body {
         overflow-x: hidden;
-        font-family: "JetBrains Mono", monospace;
+        font-family: "Outfit", "Space Grotesk", "Segoe UI", sans-serif;
         background: #040404;
         color: #ffe8d6;
       }
@@ -80,9 +80,7 @@
           document.body.classList.add('theme-night');
         }
         if (document.fonts && document.fonts.ready) {
-          var timeout = setTimeout(revealApp, 1800);
           document.fonts.ready.finally(function () {
-            clearTimeout(timeout);
             revealApp();
           });
         } else {

@@ -2,7 +2,85 @@ import React, { useEffect, useRef, useState } from 'react';
 import CyberVaultIntro from './CyberVaultIntro';
 import './Welcome.css';
 
-
+function HexCanvas() {
+  const ref = useRef(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let animId, t = 0;
+    const isMobile = window.innerWidth < 600;
+    const HEX_SIZE = isMobile ? 20 : 30;
+    const HEX_GAP  = 2;
+    const W = HEX_SIZE * 2 + HEX_GAP;
+    const H = Math.sqrt(3) * HEX_SIZE + HEX_GAP;
+    function resize() { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; }
+    resize();
+    const ro = new ResizeObserver(resize); ro.observe(canvas);
+    const PULSE_COUNT = isMobile ? 3 : 6;
+    let pulses = [];
+    function respawnPulse(i) {
+      const cols = Math.ceil(canvas.width / (W * 0.75)) + 2;
+      const rows = Math.ceil(canvas.height / H) + 2;
+      pulses[i] = { col: Math.floor(Math.random() * cols), row: Math.floor(Math.random() * rows), phase: Math.random() * Math.PI * 2, speed: 0.4 + Math.random() * 0.7 };
+    }
+    for (let i = 0; i < PULSE_COUNT; i++) respawnPulse(i);
+    const STREAM_COUNT = isMobile ? 5 : 12;
+    const DIR_ANGLES = [0,60,120,180,240,300].map(d => d * Math.PI / 180);
+    let streams = [];
+    function respawnStream(i) {
+      const cols = Math.ceil(canvas.width / (W * 0.75)) + 2;
+      const rows = Math.ceil(canvas.height / H) + 2;
+      streams[i] = { col: Math.floor(Math.random()*cols), row: Math.floor(Math.random()*rows), dir: Math.floor(Math.random()*6), progress: Math.random(), speed: 0.003 + Math.random()*0.005 };
+    }
+    for (let i = 0; i < STREAM_COUNT; i++) respawnStream(i);
+    function hexPath(cx, cy, r) {
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) { const a = (Math.PI/3)*i - Math.PI/6; i===0 ? ctx.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a)) : ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a)); }
+      ctx.closePath();
+    }
+    function draw() {
+      t += 0.01; ctx.clearRect(0,0,canvas.width,canvas.height);
+      const cols = Math.ceil(canvas.width/(W*0.75))+3, rows = Math.ceil(canvas.height/H)+3;
+      const ox = (canvas.width - cols*W*0.75)/2, oy = (canvas.height - rows*H)/2;
+      const maxD = Math.sqrt(canvas.width*canvas.width+canvas.height*canvas.height)*0.5;
+      for (let col = -1; col < cols; col++) {
+        for (let row = -1; row < rows; row++) {
+          const cx = ox+col*W*0.75, cy = oy+row*H+(col%2===0?0:H*0.5);
+          const dx=cx-canvas.width*0.5, dy=cy-canvas.height*0.5;
+          const dist=Math.sqrt(dx*dx+dy*dy);
+          const prox=1-Math.min(dist/maxD,1);
+          let pb=0;
+          for (const p of pulses) {
+            const px=ox+p.col*W*0.75, py=oy+p.row*H+(p.col%2===0?0:H*0.5);
+            const pd=Math.sqrt((cx-px)**2+(cy-py)**2);
+            const wave=Math.sin(t*p.speed-pd*0.042+p.phase);
+            pb=Math.max(pb,Math.max(0,wave)*Math.max(0,1-pd/220));
+          }
+          hexPath(cx,cy,HEX_SIZE-1.5);
+          ctx.fillStyle=`rgba(160,75,8,${(0.02+prox*0.04+pb*0.14)*0.5})`; ctx.fill();
+          ctx.strokeStyle=`rgba(255,${130+pb*80},${15+pb*35},${0.05+prox*0.09+pb*0.5})`; ctx.lineWidth=0.6+pb*0.8; ctx.stroke();
+          if (pb>0.5) { ctx.beginPath(); ctx.arc(cx,cy,1.5+pb*2,0,Math.PI*2); ctx.fillStyle=`rgba(255,${150+pb*100},50,${pb*0.85})`; ctx.fill(); }
+        }
+      }
+      for (let i=0;i<streams.length;i++) {
+        const s=streams[i]; s.progress+=s.speed;
+        if (s.progress>=1){respawnStream(i);continue;}
+        const sx=ox+s.col*W*0.75, sy=oy+s.row*H+(s.col%2===0?0:H*0.5);
+        const ex=sx+Math.cos(DIR_ANGLES[s.dir])*W*0.75, ey=sy+Math.sin(DIR_ANGLES[s.dir])*H;
+        const lx=sx+(ex-sx)*s.progress, ly=sy+(ey-sy)*s.progress;
+        const grad=ctx.createLinearGradient(sx,sy,lx,ly);
+        grad.addColorStop(0,'rgba(255,140,30,0)'); grad.addColorStop(0.5,'rgba(255,160,50,0.12)'); grad.addColorStop(1,'rgba(255,200,80,0.55)');
+        ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(lx,ly); ctx.strokeStyle=grad; ctx.lineWidth=1.2; ctx.stroke();
+        ctx.beginPath(); ctx.arc(lx,ly,2.2,0,Math.PI*2); ctx.fillStyle='rgba(255,185,65,0.9)'; ctx.fill();
+      }
+      animId=requestAnimationFrame(draw);
+    }
+    draw();
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  }, []);
+  return <canvas ref={ref} className="wc-hex-canvas" aria-hidden="true" />;
+}
 
 function useTypewriter(words, typeSpeed=42, deleteSpeed=22, pauseMs=1600) {
   const [display, setDisplay] = useState('');
@@ -206,13 +284,13 @@ function BiometricRing() {
 
 function Welcome({ onLogin, onSignup, onDemo, onContinue }) {
   const [mounted, setMounted] = useState(false);
-  const typeText = useTypewriter(['Zero-trust encryption.','Orange-line precision.','Biometric-grade access.']);
+  const typeText = useTypewriter(['Zero-trust encryption.','Orange-line precision.','Black-box security.','Biometric-grade access.']);
   useEffect(()=>{setTimeout(()=>setMounted(true),60);},[]);
   const highlights=['Zero-trust encryption pipeline','Biometric and password access layers','Enterprise-grade threat visibility','Fast local-first secure workflows'];
   const capabilityCards=[
     {label:'Vault Core',     title:'Encryption at every stage',       text:'Files protected during import, storage, and retrieval using hardened AES-256 flows.'},
     {label:'Identity Layer', title:'Multiple trusted sign-in paths',  text:'Password, face, iris, and fingerprint options based on your security policy.'},
-    {label:'Ops View',       title:'Audit-focused activity tracking',  text:'Review patterns, validate events, and monitor account confidence from one place.'},
+    {label:'Ops View',       title:'Audit-focused Tracking',  text:'Review patterns, validate events, and monitor account confidence from one place.'},
   ];
   const handleLogin  = ()=>{if(onLogin){onLogin();return;}if(onContinue)onContinue();};
   const handleSignup = ()=>{if(onSignup){onSignup();return;}if(onContinue)onContinue();};
@@ -220,7 +298,7 @@ function Welcome({ onLogin, onSignup, onDemo, onContinue }) {
 
   return (
     <div className={`welcome-root${mounted?' welcome-root--in':''}`}>
-      <MatrixRain opacity={0.45} />
+      <HexCanvas/>
       <div className="orange-glow glow-a" aria-hidden="true"/>
       <div className="orange-glow glow-b" aria-hidden="true"/>
       <div className="scan-overlay"       aria-hidden="true"/>
@@ -255,7 +333,7 @@ function Welcome({ onLogin, onSignup, onDemo, onContinue }) {
 
           <div className="capability-grid wc-reveal wc-reveal--6">
             {capabilityCards.map((card,i)=>(
-              <article className="capability-card" key={card.title} style={{animationDelay:`${0.75+i*0.14}s`}}>
+              <article className={`capability-card capability-card--${i}`} key={card.title} style={{'--card-delay':`${i*0.12}s`}}>
                 <div className="cap-label">{card.label}</div>
                 <h3>{card.title}</h3>
                 <p>{card.text}</p>
@@ -409,24 +487,22 @@ function MatrixRain({ opacity = 0.5 }) {
 
 /* ── Here We Go Popup ── */
 function HereWeGoPopup({ onDone }) {
-  const [phase, setPhase] = useState('in');   // in → hold → out
+  const [phase, setPhase] = useState('in');
   const [count, setCount] = useState(7);
   const canvasRef = useRef(null);
 
-  /* countdown */
   useEffect(() => {
     const id = setInterval(() => setCount(c => c - 1), 1000);
     return () => clearInterval(id);
   }, []);
 
-  /* phase timing */
   useEffect(() => {
     const t1 = setTimeout(() => setPhase('out'), 6600);
     const t2 = setTimeout(() => onDone(), 7100);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [onDone]);
 
-  /* 3-D rotating torus-like ring drawn on canvas */
+  /* Infinite symbol with heavy 3D effect drawn on canvas */
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -435,52 +511,103 @@ function HereWeGoPopup({ onDone }) {
     canvas.width = W; canvas.height = H;
     let animId, t = 0;
 
-    function drawRing() {
+    function drawInfinity() {
       ctx.clearRect(0, 0, W, H);
       const cx = W / 2, cy = H / 2;
-      const R = 72, r = 18, segs = 64, tubes = 20;
+      const segs = 220;
+      const ry = t * 0.55;
+      const rx = 0.8 + Math.sin(t * 0.5) * 0.25;
+      const rz = Math.sin(t * 0.35) * 0.18;
+      const cosY = Math.cos(ry), sinY = Math.sin(ry);
+      const cosX = Math.cos(rx), sinX = Math.sin(rx);
+      const cosZ = Math.cos(rz), sinZ = Math.sin(rz);
 
-      for (let j = 0; j < tubes; j++) {
-        const phi = (j / tubes) * Math.PI * 2 + t * 0.7;
-        for (let i = 0; i < segs; i++) {
-          const theta = (i / segs) * Math.PI * 2;
-          const x3 = (R + r * Math.cos(phi)) * Math.cos(theta);
-          const y3 = (R + r * Math.cos(phi)) * Math.sin(theta);
-          const z3 = r * Math.sin(phi);
+      const pts = [];
+      for (let i = 0; i < segs; i++) {
+        const u = (i / segs) * Math.PI * 2;
+        const s = Math.sin(u);
+        const c = Math.cos(u);
 
-          /* 3-D rotation on X + Y */
-          const ry = t * 0.4;
-          const rx = t * 0.25;
-          const x2 = x3 * Math.cos(ry) - z3 * Math.sin(ry);
-          const z2 = x3 * Math.sin(ry) + z3 * Math.cos(ry);
-          const y2 = y3 * Math.cos(rx) - z2 * Math.sin(rx);
-          const z1 = y3 * Math.sin(rx) + z2 * Math.cos(rx);
+        // Lemniscate-like infinity in 3D
+        let x = s * 70;
+        let y = s * c * 58;
+        let z = Math.cos(u * 2 + t * 1.4) * 22;
 
-          const scale = 340 / (340 + z1);
-          const px = cx + x2 * scale;
-          const py = cy + y2 * scale;
+        // rotate Y, X, then Z for exaggerated 3D
+        let x1 = x * cosY - z * sinY;
+        let z1 = x * sinY + z * cosY;
+        let y1 = y * cosX - z1 * sinX;
+        let z2 = y * sinX + z1 * cosX;
+        let x2 = x1 * cosZ - y1 * sinZ;
+        let y2 = x1 * sinZ + y1 * cosZ;
 
-          const bright2 = Math.max(0, (z1 + r + R) / (2 * (r + R)));
-          const alpha = 0.15 + bright2 * 0.7;
-          const radius = Math.max(0.4, 1.8 * scale);
-
-          ctx.beginPath();
-          ctx.arc(px, py, radius, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(255,${Math.floor(110 + bright2 * 120)},${Math.floor(20 + bright2 * 30)},${alpha})`;
-          ctx.fill();
-        }
+        const perspective = 1.25 / (1.85 - z2 / 90);
+        const px = cx + x2 * perspective;
+        const py = cy + y2 * perspective;
+        pts.push({ px, py, z: z2, p: perspective });
       }
 
-      /* inner glow */
-      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 60);
-      g.addColorStop(0, 'rgba(255,140,30,0.18)');
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, 60, 0, Math.PI * 2); ctx.fill();
+      const segments = [];
+      for (let i = 0; i < pts.length; i++) {
+        const p1 = pts[i];
+        const p2 = pts[(i + 1) % pts.length];
+        const depth = (p1.z + p2.z) * 0.5;
+        segments.push({ p1, p2, depth });
+      }
+      segments.sort((a, b) => a.depth - b.depth);
 
-      t += 0.022;
-      animId = requestAnimationFrame(drawRing);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const seg of segments) {
+        const depthNorm = Math.max(0, Math.min(1, (seg.depth + 30) / 60));
+        const alpha = 0.25 + depthNorm * 0.7;
+        ctx.strokeStyle = `rgba(255,${Math.floor(140 + 90 * depthNorm)},${Math.floor(40 + 40 * depthNorm)},${Math.min(0.95, alpha)})`;
+        ctx.lineWidth = 2.2 + 3.2 * depthNorm;
+        ctx.shadowBlur = 18 + 22 * depthNorm;
+        ctx.shadowColor = 'rgba(255,120,40,0.75)';
+        ctx.beginPath();
+        ctx.moveTo(seg.p1.px, seg.p1.py);
+        ctx.lineTo(seg.p2.px, seg.p2.py);
+        ctx.stroke();
+
+        ctx.strokeStyle = `rgba(255,235,190,${0.18 + depthNorm * 0.55})`;
+        ctx.lineWidth = 1.2 + 1.1 * depthNorm;
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(seg.p1.px, seg.p1.py);
+        ctx.lineTo(seg.p2.px, seg.p2.py);
+        ctx.stroke();
+
+        ctx.strokeStyle = `rgba(140,70,20,${0.22 + depthNorm * 0.35})`;
+        ctx.lineWidth = 3.2 + 3.6 * depthNorm;
+        ctx.beginPath();
+        ctx.moveTo(seg.p1.px, seg.p1.py);
+        ctx.lineTo(seg.p2.px, seg.p2.py);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      for (let i = 0; i < pts.length; i += 5) {
+        const p = pts[i];
+        const depthNorm = Math.max(0, Math.min(1, (p.z + 30) / 60));
+        const alpha = 0.25 + depthNorm * 0.8;
+        const r = Math.max(1.2, 2.3 * p.p);
+        ctx.beginPath();
+        ctx.arc(p.px, p.py, r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,205,130,${Math.min(1, alpha)})`;
+        ctx.fill();
+      }
+
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 82);
+      g.addColorStop(0, 'rgba(255,140,30,0.22)');
+      g.addColorStop(0.6, 'rgba(255,110,20,0.08)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, 78, 0, Math.PI * 2); ctx.fill();
+
+      t += 0.02;
+      animId = requestAnimationFrame(drawInfinity);
     }
-    drawRing();
+    drawInfinity();
     return () => cancelAnimationFrame(animId);
   }, []);
 
@@ -488,15 +615,14 @@ function HereWeGoPopup({ onDone }) {
     <div className={`hwg-overlay hwg-overlay--${phase}`}>
       <div className="hwg-backdrop" />
       <div className={`hwg-card hwg-card--${phase}`}>
-        {/* matrix rain inside popup */}
-        <MatrixRain opacity={0.18} />
         <div className="hwg-inner">
           <canvas ref={canvasRef} className="hwg-canvas" />
+          <div className="hwg-pop">SECURE ENTRY</div>
           <div className="hwg-label">HERE WE GO</div>
           <div className="hwg-bar-wrap">
             <div className="hwg-bar-fill" style={{ animationDuration: '7s' }} />
           </div>
-          <div className="hwg-count">{count > 0 ? count : 0}s</div>
+          <div className="hwg-count">{count > 0 ? count : 0} seconds</div>
         </div>
       </div>
     </div>
@@ -507,10 +633,6 @@ function WelcomeWithClock(props) { return <><Welcome {...props}/><LiveClock/></>
 
 function WelcomeEntry({ initialStage = 'intro', ...props }) {
   const [stage, setStage] = useState(initialStage);
-
-  useEffect(() => {
-    setStage(initialStage);
-  }, [initialStage]);
   if (stage === 'intro')
     return <CyberVaultIntro onComplete={() => setStage('popup')} forceMotion />;
   if (stage === 'popup')
