@@ -786,7 +786,7 @@
   opacity: 0;
   transform: translateY(24px);
   transition: opacity 0.8s ease, transform 0.8s ease;
-  margin-top: 92px;
+  margin-top: 28px;
 }
 
 .cv-cta-wrap.cv-cta-show {
@@ -1130,72 +1130,498 @@
   .cv-card-sub { font-size: 0.6rem; }
   .cv-scene { width: 98vw; gap: 0 10px; }
   .cv-conn-line { width: 10px; }
-  .cv-cta-wrap { margin-top: 50px; }
+  .cv-cta-wrap { margin-top: 36px; }
   .cv-btn { width: 240px; height: 48px; }
   .cv-btn-inner { font-size: 0.84rem; gap: 8px; }
   .cv-title { font-size: clamp(1.6rem, 5.5vw, 2.6rem); }
 }
 
+/* ═══════════════════════════════════════════
+   INFO WIDGETS — mobile fill section
+   ═══════════════════════════════════════════ */
+
+.cv-info-strip {
+  display: none; /* shown only on mobile via media query */
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 0 10px;
+  box-sizing: border-box;
+  z-index: 20;
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.8s ease 1.3s, transform 0.8s ease 1.3s;
+}
+
+.cv-info-strip--show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.cv-loaded .cv-info-strip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Pulse status bar ── */
+.cv-status-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 154, 60, 0.04);
+  border: 1px solid rgba(255, 154, 60, 0.14);
+  border-left: 2px solid var(--or);
+  padding: 8px 12px;
+  box-sizing: border-box;
+  gap: 8px;
+}
+
+.cv-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4fffb0;
+  box-shadow: 0 0 10px rgba(79, 255, 176, 0.7);
+  flex-shrink: 0;
+  animation: cvStatusPulse 2s ease-in-out infinite;
+}
+
+.cv-status-label {
+  font-family: var(--body);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: rgba(255, 195, 118, 0.7);
+  flex: 1;
+  text-transform: uppercase;
+}
+
+.cv-status-val {
+  font-family: var(--body);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #4fffb0;
+  text-shadow: 0 0 10px rgba(79, 255, 176, 0.5);
+}
+
+@keyframes cvStatusPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.75); }
+}
+
+/* ── Protocol tag row ── */
+.cv-tag-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cv-tag {
+  font-family: var(--body);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: rgba(255, 200, 130, 0.6);
+  border: 1px solid rgba(255, 154, 60, 0.18);
+  padding: 4px 9px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: rgba(255, 154, 60, 0.03);
+  position: relative;
+}
+
+.cv-tag::before {
+  content: '◆';
+  font-size: 0.4rem;
+  margin-right: 5px;
+  color: rgba(255, 154, 60, 0.45);
+}
+
+/* ── Vault scan line ── */
+.cv-scan-block {
+  width: 100%;
+  background: rgba(255, 154, 60, 0.03);
+  border: 1px solid rgba(255, 154, 60, 0.12);
+  padding: 10px 12px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cv-scan-block::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 154, 60, 0.35), transparent);
+  animation: cvScanLine 3.2s ease-in-out infinite;
+  top: 0;
+}
+
+@keyframes cvScanLine {
+  0%   { top: 0%;   opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 0.6; }
+  100% { top: 100%; opacity: 0; }
+}
+
+.cv-scan-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cv-scan-key {
+  font-family: var(--body);
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: rgba(255, 195, 118, 0.5);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cv-scan-val {
+  font-family: var(--body);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: rgba(255, 220, 160, 0.8);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.cv-scan-bar {
+  flex: 1;
+  height: 2px;
+  background: rgba(255, 154, 60, 0.1);
+  margin: 0 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cv-scan-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--or-dk), var(--or-lt));
+  box-shadow: 0 0 6px var(--or-gl);
+  width: var(--fill, 70%);
+}
+
+/* ── Hex ID badge ── */
+.cv-hex-badge {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 154, 60, 0.12);
+  background: rgba(255, 154, 60, 0.03);
+  box-sizing: border-box;
+}
+
+.cv-hex-label {
+  font-family: var(--mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.14em;
+  color: rgba(255, 195, 118, 0.38);
+  text-transform: uppercase;
+}
+
+.cv-hex-code {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.09em;
+  color: rgba(255, 220, 160, 0.6);
+  text-shadow: 0 0 12px rgba(255, 154, 60, 0.3);
+  animation: cvHexFlicker 6s step-end infinite;
+}
+
+@keyframes cvHexFlicker {
+  0%, 92%, 100% { opacity: 0.9; }
+  93%            { opacity: 0.3; }
+  94%            { opacity: 0.9; }
+  96%            { opacity: 0.2; }
+  97%            { opacity: 1; }
+}
+
+.cv-hex-status {
+  font-family: var(--mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  color: #4fffb0;
+  text-shadow: 0 0 8px rgba(79, 255, 176, 0.4);
+  text-transform: uppercase;
+  border: 1px solid rgba(79, 255, 176, 0.25);
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+/* ── Vault Clock widget ── */
+.cv-clock-widget {
+  width: 100%;
+  border: 1px solid rgba(255, 154, 60, 0.14);
+  background: rgba(255, 154, 60, 0.03);
+  padding: 12px 14px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cv-clock-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cv-clock-label {
+  font-family: var(--body);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: rgba(255, 195, 118, 0.45);
+  text-transform: uppercase;
+}
+
+.cv-clock-tz {
+  font-family: var(--body);
+  font-size: 0.54rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: rgba(255, 195, 118, 0.3);
+}
+
+.cv-clock-face {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px;
+}
+
+.cv-clock-seg {
+  font-family: var(--head);
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: transparent;
+  background: linear-gradient(180deg, #ffe0a8 0%, #ffb262 55%, #c97030 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  min-width: 2ch;
+  text-align: center;
+  filter: drop-shadow(0 0 12px rgba(255, 154, 60, 0.35));
+}
+
+.cv-clock-seg--sec {
+  font-size: 1.3rem;
+  background: linear-gradient(180deg, rgba(255, 210, 140, 0.75) 0%, rgba(200, 120, 40, 0.6) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  filter: drop-shadow(0 0 8px rgba(255, 154, 60, 0.2));
+  align-self: center;
+}
+
+.cv-clock-colon {
+  font-family: var(--head);
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: rgba(255, 154, 60, 0.5);
+  line-height: 1;
+  padding-bottom: 4px;
+  animation: cvColonBlink 1s step-end infinite;
+}
+
+@keyframes cvColonBlink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.15; }
+}
+
+.cv-clock-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cv-clock-date {
+  font-family: var(--body);
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: rgba(255, 195, 118, 0.5);
+}
+
+.cv-clock-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--body);
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: #4fffb0;
+  text-shadow: 0 0 8px rgba(79, 255, 176, 0.4);
+}
+
+.cv-clock-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #4fffb0;
+  box-shadow: 0 0 8px rgba(79, 255, 176, 0.7);
+  animation: cvStatusPulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+/* ── Spacer: hidden on desktop, pushes btn to bottom on mobile ── */
+.cv-stage-spacer {
+  display: none;
+}
+
 /* Mobile portrait — stack layout vertically */
 @media (max-width: 560px) {
   :root {
-    --cs: 44px;
+    --cs: 40px;
     --ribbon-h: 20px;
     --ribbon-w: 16px;
   }
 
   .cv-root {
     height: 100svh;
-    justify-content: center;
-    padding: 6px 0 8px;
+    justify-content: flex-start;
+    padding: var(--ribbon-h) 0 calc(var(--ribbon-h) + 8px);
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
+  /* ── Stage: vertical stack, centered ── */
   .cv-stage {
     margin-top: 0;
-    gap: 10px;
+    gap: 0;
     width: 100%;
-    padding: 0 8px;
+    padding: 6px 10px 10px;
     box-sizing: border-box;
     flex: 1;
-    justify-content: center;
-  }
-
-  .cv-scene {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
-    justify-items: center;
-    width: 100%;
-    height: auto;
-    gap: 10px 0;
-  }
-
-  /* Cube goes first on mobile */
-  .cv-cube-wrap { order: -1; }
-
-  .cv-panel {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 6px;
-    width: 100%;
-  }
-
-  .cv-panel--left,
-  .cv-panel--right {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
     align-items: center;
   }
 
+  /* Spacer flexes to push button near bottom */
+  .cv-stage-spacer {
+    display: block;
+    flex: 1;
+    min-height: 12px;
+    max-height: 40px;
+  }
+
+  /* ── Scene: cube top, then two card columns side by side ── */
+  .cv-scene {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    height: auto;
+    gap: 0;
+  }
+
+  /* ── Cube: first, nudged down a touch ── */
+  .cv-cube-wrap {
+    order: 0;
+    width: calc(var(--cs) * 2.6 + 32px);
+    height: calc(var(--cs) * 2.6 + 32px);
+    margin-top: 10px;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+  }
+
+  /* ── Panels: sit side-by-side, each a column of 3 cards ── */
+  .cv-panel {
+    flex-direction: column;
+    gap: 6px;
+    width: calc(50% - 5px);
+    align-items: stretch;
+  }
+
+  .cv-panel--left  { align-items: flex-end; }
+  .cv-panel--right { align-items: flex-start; }
+
+  /* Both panels next to each other in a row */
+  .cv-scene > .cv-panel--left,
+  .cv-scene > .cv-panel--right {
+    display: flex;
+  }
+
+  /* Wrap both panels in a horizontal row */
+  .cv-scene > .cv-panel--left ~ .cv-cube-wrap ~ .cv-panel--right,
+  .cv-scene > .cv-panel--right {
+    order: 2;
+  }
+
+  .cv-scene > .cv-cube-wrap {
+    order: 1;
+  }
+
+  /* Two-column card row wrapper — use flex row on scene for panels */
+  .cv-scene {
+    flex-direction: column;
+  }
+
+  /* Make panels lay out horizontally as siblings */
+  .cv-scene > .cv-panel {
+    flex-direction: column;
+  }
+
+  /* Override: panels side by side in a row container */
+  .cv-scene {
+    display: grid;
+    grid-template-areas:
+      "cube cube"
+      "left right";
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    justify-items: center;
+    column-gap: 8px;
+    row-gap: 8px;
+  }
+
+  .cv-cube-wrap     { grid-area: cube; justify-self: center; }
+  .cv-panel--left   { grid-area: left;  width: 100%; align-items: stretch; }
+  .cv-panel--right  { grid-area: right; width: 100%; align-items: stretch; }
+
+  .cv-panel {
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    align-items: stretch;
+  }
+
+  /* Cards: full width within their column */
   .cv-card,
   .cv-card--r {
     min-width: 0;
-    width: calc(50% - 8px);
-    max-width: 160px;
-    padding: 7px 8px;
+    width: 100%;
+    max-width: 100%;
+    padding: 8px 10px;
     gap: 6px;
-    border: 1px solid rgba(255, 154, 60, 0.18);
+    border: 1px solid rgba(255, 154, 60, 0.22);
+    animation-name: cardInL;
+    box-sizing: border-box;
   }
 
-  /* Hide connectors on mobile — no room */
+  /* Hide connectors — no room */
   .cv-card-connector,
   .cv-card-connector--r {
     display: none;
@@ -1206,40 +1632,50 @@
     width: 2px;
   }
 
-  .cv-card-title { font-size: 0.7rem; letter-spacing: 0.06em; white-space: normal; }
-  .cv-card-sub   { font-size: 0.58rem; white-space: normal; }
-  .cv-card-icon  { font-size: 1rem; width: 16px; }
+  .cv-card-title { font-size: 0.7rem; letter-spacing: 0.07em; white-space: normal; }
+  .cv-card-sub   { font-size: 0.58rem; white-space: normal; line-height: 1.3; }
+  .cv-card-icon  { font-size: 0.95rem; width: 15px; }
 
-  .cv-title { font-size: clamp(1.5rem, 6.8vw, 2.3rem); letter-spacing: 0.04em; }
-  .cv-title-block { margin-top: 6px; }
+  /* ── Title: below cards ── */
+  .cv-title { font-size: clamp(1.45rem, 7vw, 2.1rem); letter-spacing: 0.06em; }
+  .cv-title-block { margin-top: 14px; }
 
-  .cv-cta-wrap { margin-top: 4px; margin-bottom: 0; }
-  .cv-btn { width: 220px; height: 46px; }
-  .cv-btn-inner { font-size: 0.8rem; gap: 7px; }
-  .cv-btn-label { font-size: 0.8rem; }
-
-  /* Fewer matrix rain streams on very small screens handled by canvas logic */
-  .cv-cube-wrap {
-    width: calc(var(--cs) * 2.8 + 40px);
-    height: calc(var(--cs) * 2.8 + 40px);
-    margin-top: -10px;
+  /* ── Info widgets: shown on mobile ── */
+  .cv-info-strip {
+    display: flex;
+    margin-top: 14px;
   }
+
+  /* ── Button: right below info strip with a clean gap ── */
+  .cv-cta-wrap {
+    margin-top: 14px;
+    margin-bottom: 4px;
+    width: 100%;
+    align-items: center;
+    padding: 0 12px;
+  }
+
+  .cv-btn {
+    width: min(80vw, 268px);
+    height: 50px;
+  }
+
+  .cv-btn-inner { font-size: 0.82rem; gap: 8px; }
+  .cv-btn-label { font-size: 0.82rem; letter-spacing: 0.14em; }
 }
 
 /* Very small phones */
 @media (max-width: 375px) {
-  :root { --cs: 32px; }
+  :root { --cs: 34px; }
 
   .cv-card,
   .cv-card--r {
-    width: calc(50% - 6px);
-    max-width: 145px;
-    padding: 6px 7px;
+    padding: 6px 8px;
   }
 
-  .cv-title { font-size: clamp(1.2rem, 7vw, 1.8rem); }
-  .cv-btn { width: 200px; height: 44px; }
-  .cv-btn-inner { font-size: 0.76rem; }
+  .cv-title { font-size: clamp(1.25rem, 7.5vw, 1.8rem); }
+  .cv-btn { width: min(82vw, 250px); height: 48px; }
+  .cv-btn-inner { font-size: 0.78rem; }
 }
 
 /* Short screens (landscape mobile) */
