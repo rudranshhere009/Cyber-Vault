@@ -1,6 +1,57 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './CyberVaultIntro.css';
 
+/* ── Falling matrix rain ── */
+function MatrixRain() {
+  const ref = useRef(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let animId;
+    const CHARS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF';
+    const FS = 13;
+    let cols, drops, bright;
+    function init() {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      cols  = Math.floor(canvas.width / FS);
+      drops = Array.from({ length: cols }, () => Math.random() * -(canvas.height / FS));
+      bright = new Set(Array.from({ length: Math.max(1, Math.floor(cols * 0.1)) }, () => Math.floor(Math.random() * cols)));
+    }
+    const ro = new ResizeObserver(init); ro.observe(canvas); init();
+    let frame = 0;
+    function draw() {
+      animId = requestAnimationFrame(draw);
+      if (++frame % 2 !== 0) return;
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.font = `${FS}px "Share Tech Mono",monospace`;
+      for (let i = 0; i < cols; i++) {
+        const y = drops[i] * FS;
+        const ch = CHARS[Math.floor(Math.random() * CHARS.length)];
+        if (bright.has(i)) {
+          ctx.shadowBlur = 8; ctx.shadowColor = 'rgba(255,140,30,0.85)';
+          ctx.fillStyle = 'rgba(255,210,140,0.96)';
+        } else {
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = `rgba(190,95,12,${0.22 + Math.random() * 0.18})`;
+        }
+        ctx.fillText(ch, i * FS, y);
+        ctx.shadowBlur = 0;
+        drops[i] += 0.48 + Math.random() * 0.38;
+        if (drops[i] * FS > canvas.height && Math.random() > 0.974) {
+          drops[i] = Math.random() * -18;
+          Math.random() > 0.5 ? bright.add(i) : bright.delete(i);
+        }
+      }
+    }
+    draw();
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  }, []);
+  return <canvas ref={ref} className="cv-matrix-rain" aria-hidden="true" />;
+}
+
 const LEFT_FEATURES = [
   { id: 'zt', icon: '⬡', title: 'ZERO-TRUST', sub: 'Local-first shield mesh' },
   { id: 'bl', icon: '◈', title: 'BIO LOCK', sub: 'Face & fingerprint access' },
@@ -35,6 +86,21 @@ const RIBBONS = [
   { pos: 'right', dir: 'btt', items: [...RIBBON_ITEMS.slice(6), ...RIBBON_ITEMS.slice(0, 6)], dur: 26 }
 ];
 
+const MATRIX_STREAMS = [
+  { id: 'm1',  x: '4%',  dur: '17s', delay: '-6s',  alpha: 0.6, text: `ZERO-TRUST\nAES-256\nBIO LOCK\nP2P RELAY\nAUDIT GRID\nDEAD DROP\nTHREAT\nVAULT` },
+  { id: 'm2',  x: '11%', dur: '21s', delay: '-11s', alpha: 0.5, text: `SIGN\nENCRYPT\nSCAN\nVERIFY\nHARDEN\nTRACE\nLOCKDOWN` },
+  { id: 'm3',  x: '19%', dur: '19s', delay: '-9s',  alpha: 0.55, text: `COLD STORAGE\nKEY ROTATION\nSTEALTH\nAUDIT GRID\nBIOMETRIC` },
+  { id: 'm4',  x: '27%', dur: '23s', delay: '-14s', alpha: 0.45, text: `VAULT SHARD\nZERO-TRUST\nAES-256\nDEAD DROP\nP2P RELAY` },
+  { id: 'm5',  x: '35%', dur: '20s', delay: '-7s',  alpha: 0.55, text: `LOCK\nSCAN\nSIGN\nSTORE\nAUDIT\nMONITOR` },
+  { id: 'm6',  x: '43%', dur: '22s', delay: '-10s', alpha: 0.5, text: `THREAT GRID\nBIO LOCK\nCOLD MODE\nKEY ROTATION\nSTEALTH` },
+  { id: 'm7',  x: '52%', dur: '18s', delay: '-5s',  alpha: 0.6, text: `P2P RELAY\nAUDIT GRID\nZERO-TRUST\nAES-256\nVAULT` },
+  { id: 'm8',  x: '60%', dur: '24s', delay: '-16s', alpha: 0.45, text: `DEAD DROP\nTHREAT\nSIGN\nENCRYPT\nVERIFY\nHARDEN` },
+  { id: 'm9',  x: '68%', dur: '19s', delay: '-8s',  alpha: 0.55, text: `ZERO-TRUST\nBIO LOCK\nAES-256\nAUDIT GRID\nDEAD DROP` },
+  { id: 'm10', x: '76%', dur: '22s', delay: '-12s', alpha: 0.5, text: `VAULT\nTRACE\nSIGN\nSCAN\nVERIFY\nLOCKDOWN` },
+  { id: 'm11', x: '84%', dur: '20s', delay: '-6s',  alpha: 0.55, text: `STEALTH\nCOLD MODE\nKEY ROTATION\nTHREAT\nAUDIT` },
+  { id: 'm12', x: '92%', dur: '25s', delay: '-18s', alpha: 0.45, text: `P2P RELAY\nENCRYPT\nSTORE\nVERIFY\nHARDEN` }
+];
+
 const Intro = ({ onComplete, onStartTransition, forceMotion = false }) => {
   const [loaded, setLoaded] = useState(false);
   const [buttonReady, setButtonReady] = useState(false);
@@ -56,45 +122,62 @@ const Intro = ({ onComplete, onStartTransition, forceMotion = false }) => {
   const handleEnter = () => {
     if (transitioning) return;
     setTransitioning(true);
-    if (onStartTransition) onStartTransition();
     completeRef.current = setTimeout(() => {
       if (onComplete) onComplete();
-    }, 1600);
+    }, 320);
   };
 
   return (
     <div className={`cv-root ${loaded ? 'cv-loaded' : ''} ${transitioning ? 'cv-opening' : ''} ${forceMotion ? 'cv-force-motion' : ''}`}>
       <div className="cv-bg">
-        <div className="cv-grid" />
-        <div className="cv-radial" />
-        <div className="cv-matrix" aria-hidden="true" />
-        {[...Array(18)].map((_, i) => (
-          <span
-            key={i}
-            className="cv-particle"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 7}s`,
-              animationDuration: `${5 + Math.random() * 6}s`
-            }}
-          />
-        ))}
+        <div className="cv-cyber-grid" />
+        <div className="cv-cyber-circuit" />
+        <div className="cv-cyber-scanlines" />
+        <div className="cv-cyber-sweep" />
+        <div className="cv-cyber-glitch" />
       </div>
       <div className="cv-veil" />
 
-      {RIBBONS.map((r) => (
-        <div key={r.pos} className={`cv-ribbon cv-ribbon--${r.pos} cv-ribbon--${r.dir}`}>
-          <div className="cv-ribbon-track" style={{ animationDuration: `${r.dur}s` }}>
-            {[...r.items, ...r.items].map((item, i) => (
-              <span key={i} className="cv-ribbon-item">
-                {item}
-                <span className="cv-ribbon-sep">·</span>
-              </span>
-            ))}
+      {RIBBONS.map((r) => {
+        const isVertical = r.pos === 'left' || r.pos === 'right';
+        const verticalItems = isVertical ? Array.from({ length: 6 }, () => r.items).flat() : null;
+        return (
+          <div key={r.pos} className={`cv-ribbon cv-ribbon--${r.pos} cv-ribbon--${r.dir}`}>
+            <div
+              className={`cv-ribbon-track${isVertical ? ' cv-ribbon-track--v' : ''}`}
+              style={{ animationDuration: `${r.dur}s` }}
+            >
+              {isVertical ? (
+                <>
+                  <div className="cv-ribbon-list">
+                    {verticalItems.map((item, i) => (
+                      <span key={`v1-${i}`} className="cv-ribbon-item">
+                        {item}
+                        <span className="cv-ribbon-sep">&middot;</span>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="cv-ribbon-list">
+                    {verticalItems.map((item, i) => (
+                      <span key={`v2-${i}`} className="cv-ribbon-item">
+                        {item}
+                        <span className="cv-ribbon-sep">&middot;</span>
+                      </span>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                [...r.items, ...r.items].map((item, i) => (
+                  <span key={i} className="cv-ribbon-item">
+                    {item}
+                    <span className="cv-ribbon-sep">&middot;</span>
+                  </span>
+                ))
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       <main className="cv-stage">
         <div className="cv-scene">

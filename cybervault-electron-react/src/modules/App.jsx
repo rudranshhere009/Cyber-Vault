@@ -656,12 +656,15 @@ function App() {
   const [demoSplashOpen, setDemoSplashOpen] = useState(false);
 
   const [page, setPage] = useState('welcome');
+  const [welcomeStartStage, setWelcomeStartStage] = useState('intro');
   const handleGoToLogin = useCallback(() => {
     setMode('login');
+    setWelcomeStartStage('intro');
     setPage('login');
   }, []);
   const handleGoToSignup = useCallback(() => {
     setMode('signup');
+    setWelcomeStartStage('intro');
     setPage('login');
   }, []);
   const clearDemoSessionArtifacts = useCallback(async (email, currentFiles = []) => {
@@ -3264,7 +3267,12 @@ function App() {
   return (
     <div>
       {page === 'welcome' && (
-        <Welcome onLogin={handleGoToLogin} onSignup={handleGoToSignup} onDemo={startDemoMode} />
+        <Welcome
+          onLogin={handleGoToLogin}
+          onSignup={handleGoToSignup}
+          onDemo={startDemoMode}
+          initialStage={welcomeStartStage}
+        />
       )}
 
       {page === 'login' && (
@@ -3272,7 +3280,10 @@ function App() {
           <button
             type="button"
             className="back-to-welcome-btn"
-            onClick={() => setPage('welcome')}
+            onClick={() => {
+              setWelcomeStartStage('welcome');
+              setPage('welcome');
+            }}
           >
             <span className="back-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" className="back-icon-svg">
