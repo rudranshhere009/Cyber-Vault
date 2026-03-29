@@ -2,6 +2,9 @@
 
 CyberVault is a local-first desktop vault built with Electron + React for encrypting, organizing, auditing, and restoring sensitive files on-device.
 
+CyberVault is a security-focused desktop workspace that blends local-first encryption, multi-factor identity, and operational monitoring into a single vault experience. It is built to help teams handle sensitive files with confidence: encrypting on-device, verifying integrity, and surfacing audit-ready signals without relying on external storage by default. The UI pairs guided onboarding, demo access, and a deep feature set?OCR, threat insights, and chatbot assistance?so users can move from first launch to real workflows fast, while keeping control of data and context end-to-end. ????
+
+
 This README is intentionally detailed so maintainers and contributors can quickly understand what exists today, how it works, and how to operate it safely.
 
 ## 🚀 Quick Start (2 min)
@@ -29,6 +32,8 @@ npm run dev
 
 - [🚀 Quick Start (2 min)](#quick-start-2-min)
 - [🧭 Project Snapshot](#project-snapshot)
+- [??? Project Visual Overview](#project-visual-overview)
+- [?? AI Chatbot (OCR Intelligence)](#ai-chatbot-ocr-intelligence)
 - [✅ What Is Implemented](#what-is-implemented)
 - [📊 Feature Matrix](#feature-matrix)
 - [🛡️ Security Model](#security-model)
@@ -40,7 +45,6 @@ npm run dev
 - [🤖 OCR Assistant and AI Answering](#ocr-assistant-and-ai-answering)
 - [🎯 Mission Mode](#mission-mode)
 - [📈 Compliance and Monitoring Panels](#compliance-and-monitoring-panels)
-- [🖼️ Project Visual Overview](#project-visual-overview)
 - [⚙️ Installation and Setup](#installation-and-setup)
 - [🛠️ Run and Build Commands](#run-and-build-commands)
 - [🔑 Environment Variables](#environment-variables)
@@ -48,7 +52,6 @@ npm run dev
 - [🧯 Troubleshooting](#troubleshooting)
 - [🔒 Known Gaps and Hardening Opportunities](#known-gaps-and-hardening-opportunities)
 - [🧪 Future Expansion (In Progress)](#future-expansion-in-progress)
-- [📝 Release Notes](#release-notes)
 - [🤝 Contributing Notes](#contributing-notes)
 - [📄 License](#license)
 
@@ -65,6 +68,61 @@ CyberVault currently provides:
 - Mission workflows and challenge/badge mechanics.
 - Guided demo mode onboarding with guest sessions and feature slides.
 - Cinematic intro + "Here We Go" transition flow before the welcome screen.
+
+
+
+## ??? Project Visual Overview
+
+### ?? Login Screen
+
+![Login](docs/images/login.png)
+
+<br/>
+
+### ??? Vault Dashboard
+
+![Vault Dashboard](docs/images/vault-dashboard.png)
+
+<br/>
+
+### ??? Security Posture
+
+![Security Posture](docs/images/security-posture.png)
+
+<br/>
+
+### ?? Threat Monitor
+
+![Threat Monitor](docs/images/threat-monitor.png)
+
+<br/>
+
+### ?? OCR Assistant
+
+![OCR Assistant](docs/images/ocr-assistant.png)
+
+<br/>
+
+### ?? AI Chatbot
+
+![AI Chatbot](docs/images/ai-chatbot.png)
+
+<br/>
+
+### ??? Visualized ED Effects
+
+![Visualized ED Effects](docs/images/visualized-ed-effects.png)
+
+## ?? AI Chatbot (OCR Intelligence)
+
+CyberVault ships an AI chatbot that is directly integrated with the OCR pipeline. It ingests extracted text from images, PDFs (including scanned pages), and plain files, then builds a secure, vault-scoped context for question answering.
+
+Why it matters and what makes it unique:
+
+- It turns encrypted vault content into searchable, conversational knowledge without moving files to the cloud by default.
+- It works on messy real-world documents (scanned PDFs, screenshots) because OCR is part of the pipeline, not an afterthought.
+- It keeps answers tied to vault context, helping with audits, investigations, and compliance reviews faster than generic chat tools.
+- It can run locally with heuristic extraction, and supports higher-fidelity answers via a model provider when configured.
 
 ## ✅ What Is Implemented
 
@@ -317,36 +375,6 @@ The application includes operational panels for:
 
 These panels are designed for operational awareness and lightweight evidence generation.
 
-## 🖼️ Project Visual Overview
-
-### 🔐 Login Screen
-
-![Login](docs/images/login.png)
-
-<br/>
-
-### 🗄️ Vault Dashboard
-
-![Vault Dashboard](docs/images/vault-dashboard.png)
-
-<br/>
-
-### 🛡️ Security Posture
-
-![Security Posture](docs/images/security-posture.png)
-
-<br/>
-
-### 🚨 Threat Monitor
-
-![Threat Monitor](docs/images/threat-monitor.png)
-
-<br/>
-
-### 🤖 OCR Assistant
-
-![OCR Assistant](docs/images/ocr-assistant.png)
-
 ## ⚙️ Installation and Setup
 
 ### Prerequisites
@@ -507,22 +535,6 @@ The following roadmap items are **partially implemented** and under active devel
 - Progressive hardening of secret handling, credential-store protection, and runtime policy enforcement.
 - Planned additions include stricter key lifecycle management, stronger local at-rest controls, and enterprise-grade security checks.
 - Current status: core encryption/auth paths are operational; advanced hardening controls are partially done and actively being expanded.
-
-## 📝 Release Notes
-
-### 2026-03-29
-
-- Added cinematic intro and "Here We Go" transition prior to welcome.
-- Added guided demo mode splash with feature slides and guest session entry.
-- Added demo session restrictions and cleanup flow.
-
-### 2026-02-13
-
-- Expanded README into a full technical reference with architecture, flows, and operations.
-- Added Quick Start section for first-time setup.
-- Added screenshot conventions and markdown embedding guide.
-- Added troubleshooting and hardening roadmap sections.
-- Synced documentation at root and app-level README.
 
 ## 🤝 Contributing Notes
 

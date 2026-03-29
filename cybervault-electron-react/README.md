@@ -2,6 +2,9 @@
 
 CyberVault is a local-first desktop vault built with Electron + React for encrypting, organizing, auditing, and restoring sensitive files on-device.
 
+CyberVault is a security-focused desktop workspace that blends local-first encryption, multi-factor identity, and operational monitoring into a single vault experience. It is built to help teams handle sensitive files with confidence: encrypting on-device, verifying integrity, and surfacing audit-ready signals without relying on external storage by default. The UI pairs guided onboarding, demo access, and a deep feature set?OCR, threat insights, and chatbot assistance?so users can move from first launch to real workflows fast, while keeping control of data and context end-to-end. ????
+
+
 This README is intentionally detailed so maintainers and contributors can quickly understand what exists today, how it works, and how to operate it safely.
 
 ## 🚀 Quick Start (2 min)
