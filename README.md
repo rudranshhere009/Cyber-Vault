@@ -61,7 +61,7 @@ CyberVault currently provides:
 - AES-256-GCM encryption/decryption with checksum verification.
 - Backup and restore workflows.
 - Audit and threat monitoring dashboards.
-- OCR text extraction and optional AI-assisted Q&A.
+- OCR text extraction and integrated AI chatbot Q&A.
 - Mission workflows and challenge/badge mechanics.
 - Guided demo mode onboarding with guest sessions and feature slides.
 - Cinematic intro + "Here We Go" transition flow before the welcome screen.
@@ -101,7 +101,7 @@ CyberVault currently provides:
 - PDF text extraction via pdf.js and OCR fallback for scanned PDFs.
 - Text file extraction.
 - File Q&A assistant with local heuristics.
-- Optional OpenAI-backed answer generation over extracted text.
+- OpenAI-backed answer generation over extracted text when configured.
 
 ### UX and profile features
 
@@ -127,7 +127,7 @@ CyberVault currently provides:
 | Encrypted backup export | Implemented | `.cybvlt` output |
 | Backup restore | Implemented | Decrypt + restore metadata/payload mapping |
 | OCR extraction | Implemented | Tesseract + pdf.js integration |
-| AI Q&A over OCR text | Implemented (optional) | Requires OpenAI env vars |
+| AI chatbot Q&A over OCR text | Implemented | Local heuristics + OpenAI when configured |
 | Audit report JSON/PDF export | Implemented | Electron save dialog + PDF print |
 | Threat monitor + export | Implemented | Risk score + threat log |
 | Cross-platform packaging | Partial | Windows target configured in `electron-builder` |
@@ -146,7 +146,7 @@ Important current behavior:
 
 - WebAuthn credential store persistence exists, but at-rest hardening for that store is a known improvement area.
 - Face models are currently loaded from external URLs at runtime.
-- Optional AI answering sends extracted text context to OpenAI only when configured.
+- AI chatbot uses OCR text locally; if OpenAI is configured, excerpts may be sent for higher-quality answers.
 - Demo sessions are isolated and cleared on exit to avoid persistence of guest data.
 
 ## 🧰 Tech Stack
@@ -295,7 +295,7 @@ Demo mode note: upload is limited to a single file per session.
 ### Question answering behavior
 
 - Local rule-based/section extraction fallback is available.
-- If OpenAI env vars are set, assistant can request model-generated answers.
+- Assistant uses local heuristics by default; if OpenAI is configured, it can request model-generated answers.
 
 ## 🎯 Mission Mode
 
