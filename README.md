@@ -25,30 +25,30 @@ npm run dev
 
 ## Table of Contents
 
-- [Quick Start (2 min)](#quick-start-2-min)
-- [Project Snapshot](#project-snapshot)
-- [??? Project Visual Overview](#project-visual-overview)
-- [?? AI Chatbot (OCR Intelligence)](#ai-chatbot-ocr-intelligence)
-- [What Is Implemented](#what-is-implemented)
-- [Feature Matrix](#feature-matrix)
-- [Security Model](#security-model)
-- [Tech Stack](#tech-stack)
-- [Architecture](#architecture)
-- [Data Storage Layout](#data-storage-layout)
-- [Authentication and Identity Flows](#authentication-and-identity-flows)
-- [Vault Workflows](#vault-workflows)
-- [OCR Assistant and AI Answering](#ocr-assistant-and-ai-answering)
-- [Mission Mode](#mission-mode)
-- [Compliance and Monitoring Panels](#compliance-and-monitoring-panels)
-- [Installation and Setup](#installation-and-setup)
-- [Run and Build Commands](#run-and-build-commands)
-- [Environment Variables](#environment-variables)
-- [Project Structure](#project-structure)
-- [Troubleshooting](#troubleshooting)
-- [Known Gaps and Hardening Opportunities](#known-gaps-and-hardening-opportunities)
-- [Future Expansion (In Progress)](#future-expansion-in-progress)
-- [Contributing Notes](#contributing-notes)
-- [License](#license)
+- [:rocket: Quick Start (2 min)](#quick-start-2-min)
+- [:compass: Project Snapshot](#project-snapshot)
+- [:framed_picture: Project Visual Overview](#project-visual-overview)
+- [:robot: AI Chatbot (OCR Intelligence)](#ai-chatbot-ocr-intelligence)
+- [:white_check_mark: What Is Implemented](#what-is-implemented)
+- [:bar_chart: Feature Matrix](#feature-matrix)
+- [:shield: Security Model](#security-model)
+- [:toolbox: Tech Stack](#tech-stack)
+- [:building_construction: Architecture](#architecture)
+- [:file_folder: Data Storage Layout](#data-storage-layout)
+- [:lock: Authentication and Identity Flows](#authentication-and-identity-flows)
+- [:file_folder: Vault Workflows](#vault-workflows)
+- [:robot: OCR Assistant and AI Answering](#ocr-assistant-and-ai-answering)
+- [:dart: Mission Mode](#mission-mode)
+- [:chart_with_upwards_trend: Compliance and Monitoring Panels](#compliance-and-monitoring-panels)
+- [:gear: Installation and Setup](#installation-and-setup)
+- [:hammer_and_wrench: Run and Build Commands](#run-and-build-commands)
+- [:key: Environment Variables](#environment-variables)
+- [:bricks: Project Structure](#project-structure)
+- [:fire_extinguisher: Troubleshooting](#troubleshooting)
+- [:lock: Known Gaps and Hardening Opportunities](#known-gaps-and-hardening-opportunities)
+- [:test_tube: Future Expansion (In Progress)](#future-expansion-in-progress)
+- [:handshake: Contributing Notes](#contributing-notes)
+- [:page_facing_up: License](#license)
 
 ## Project Snapshot
 
@@ -66,49 +66,49 @@ CyberVault currently provides:
 
 
 
-## ??? Project Visual Overview
+## Project Visual Overview
 
-### ?? Login Screen
+### Login Screen
 
 ![Login](docs/images/login.png)
 
 <br/>
 
-### ??? Vault Dashboard
+### Vault Dashboard
 
 ![Vault Dashboard](docs/images/vault-dashboard.png)
 
 <br/>
 
-### ??? Security Posture
+### Security Posture
 
 ![Security Posture](docs/images/security-posture.png)
 
 <br/>
 
-### ?? Threat Monitor
+### Threat Monitor
 
 ![Threat Monitor](docs/images/threat-monitor.png)
 
 <br/>
 
-### ?? OCR Assistant
+### OCR Assistant
 
 ![OCR Assistant](docs/images/ocr-assistant.png)
 
 <br/>
 
-### ?? AI Chatbot
+### AI Chatbot
 
 ![AI Chatbot](docs/images/ai-chatbot.png)
 
 <br/>
 
-### ??? Visualized ED Effects
+### Visualized ED Effects
 
 ![Visualized ED Effects](docs/images/visualized-ed-effects.png)
 
-## ?? AI Chatbot (OCR Intelligence)
+## AI Chatbot (OCR Intelligence)
 
 CyberVault ships an AI chatbot that is directly integrated with the OCR pipeline. It ingests extracted text from images, PDFs (including scanned pages), and plain files, then builds a secure, vault-scoped context for question answering.
 
