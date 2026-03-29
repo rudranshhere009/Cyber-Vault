@@ -1,8 +1,8 @@
-# CyberVault
+# CyberVault :lock:
 
 CyberVault is a local-first, zero-trust, AES-256-GCM vault with PBKDF2 key derivation, biometric MFA, integrity verification, audit telemetry, OCR indexing, and an integrated AI assistant built for on-device security and operational visibility.
 
-## Quick Start (2 min)
+## :rocket: Quick Start (2 min)
 
 1. Open terminal in `cybervault-electron-react`.
 2. Install dependencies:
@@ -23,7 +23,7 @@ npm run dev
 - Upload a file and encrypt.
 - Run one backup snapshot from sidebar.
 
-## Table of Contents
+## :books: Table of Contents
 
 - [:rocket: Quick Start (2 min)](#quick-start-2-min)
 - [:compass: Project Snapshot](#project-snapshot)
@@ -49,7 +49,7 @@ npm run dev
 - [:handshake: Contributing Notes](#contributing-notes)
 - [:page_facing_up: License](#license)
 
-## Project Snapshot
+## :compass: Project Snapshot
 
 CyberVault currently provides:
 
@@ -63,7 +63,7 @@ CyberVault currently provides:
 - Guided demo mode onboarding with guest sessions and feature slides.
 - Cinematic intro + "Here We Go" transition flow before the welcome screen.
 
-## What Is Implemented
+## :white_check_mark: What Is Implemented
 
 ### Core vault and crypto
 
@@ -111,7 +111,7 @@ CyberVault currently provides:
 - Demo mode splash walkthrough with countdown and feature highlights.
 - Demo session restrictions and cleanup on exit.
 
-## Feature Matrix
+## :bar_chart: Feature Matrix
 
 | Capability | Status | Notes |
 | --- | --- | --- |
@@ -129,7 +129,7 @@ CyberVault currently provides:
 | Threat monitor + export | Implemented | Risk score + threat log |
 | Cross-platform packaging | Partial | Windows target configured in `electron-builder` |
 
-## Security Model
+## :shield: Security Model
 
 CyberVault is designed as a local-first vault with explicit tradeoffs:
 
@@ -146,7 +146,7 @@ Important current behavior:
 - AI chatbot uses OCR text locally; if Groq is configured, excerpts may be sent for higher-quality answers.
 - Demo sessions are isolated and cleared on exit to avoid persistence of guest data.
 
-## Tech Stack
+## :toolbox: Tech Stack
 
 ### Desktop and UI
 
@@ -176,7 +176,7 @@ Important current behavior:
 - cross-env
 - dotenv
 
-## Architecture
+## :building_construction: Architecture
 
 High-level layering:
 
@@ -200,7 +200,7 @@ High-level layering:
 - Save audit/threat/backup exports.
 - Optional Groq API relay for OCR assistant answers.
 
-## Data Storage Layout
+## :file_folder: Data Storage Layout
 
 CyberVault uses multiple local stores for reliability and compatibility.
 
@@ -225,7 +225,7 @@ Typical files created via IPC:
 - `webauthn_credentials.json`
 - `cybervault_blobs/<dataId>.bin`
 
-## Authentication and Identity Flows
+## :lock: Authentication and Identity Flows
 
 ### Signup flow
 
@@ -249,7 +249,7 @@ Typical files created via IPC:
 - Iris unlock.
 - Fingerprint unlock.
 
-## Vault Workflows
+## :file_folder: Vault Workflows
 
 ### File ingest
 
@@ -281,7 +281,7 @@ Demo mode note: upload is limited to a single file per session.
 3. Decrypt and validate payload.
 4. Rehydrate metadata and payload links.
 
-## OCR Assistant and AI Answering
+## :robot: OCR Assistant and AI Answering
 
 ### Local extraction behavior
 
@@ -294,7 +294,7 @@ Demo mode note: upload is limited to a single file per session.
 - Local rule-based/section extraction fallback is available.
 - Assistant uses local heuristics by default; if Groq is configured, it can request model-generated answers.
 
-## Mission Mode
+## :dart: Mission Mode
 
 Mission Mode includes:
 
@@ -302,7 +302,7 @@ Mission Mode includes:
 - Challenge actions (speed scan, tag master, encryption race, organizer goals).
 - Badge persistence in vault index.
 
-## Compliance and Monitoring Panels
+## :chart_with_upwards_trend: Compliance and Monitoring Panels
 
 The application includes operational panels for:
 
@@ -314,37 +314,37 @@ The application includes operational panels for:
 
 These panels are designed for operational awareness and lightweight evidence generation.
 
-## Project Visual Overview
+## :framed_picture: Project Visual Overview
 
-### Login Screen
+### :lock: Login Screen
 
 ![Login](docs/images/login.png)
 
 <br/>
 
-### Vault Dashboard
+### :file_cabinet: Vault Dashboard
 
 ![Vault Dashboard](docs/images/vault-dashboard.png)
 
 <br/>
 
-### Security Posture
+### :shield: Security Posture
 
 ![Security Posture](docs/images/security-posture.png)
 
 <br/>
 
-### Threat Monitor
+### :rotating_light: Threat Monitor
 
 ![Threat Monitor](docs/images/threat-monitor.png)
 
 <br/>
 
-### OCR Assistant
+### :robot: OCR Assistant
 
 ![OCR Assistant](docs/images/ocr-assistant.png)
 
-## Installation and Setup
+## :gear: Installation and Setup
 
 ### Prerequisites
 
@@ -362,7 +362,7 @@ From `cybervault-electron-react`:
 npm install
 ```
 
-## Run and Build Commands
+## :hammer_and_wrench: Run and Build Commands
 
 Run from `cybervault-electron-react`.
 
@@ -396,7 +396,7 @@ npm run dist
 
 Builds renderer and generates installer/distributables.
 
-## Environment Variables
+## :key: Environment Variables
 
 Used by optional OCR assistant AI answering (`electron/main.js`):
 
@@ -411,7 +411,7 @@ Optional dev variable:
 
 - `VITE_DEV_SERVER_URL` (overrides default `http://localhost:5173` in dev Electron bootstrap)
 
-## Project Structure
+## :bricks: Project Structure
 
 ```text
 Cyber-Vault-main/
@@ -443,7 +443,7 @@ Cyber-Vault-main/
         matrix-theme.css
 ```
 
-## Troubleshooting
+## :fire_extinguisher: Troubleshooting
 
 ### Fingerprint registration/authentication fails
 
@@ -477,7 +477,7 @@ Cyber-Vault-main/
 - Confirm backup file is not truncated/corrupted.
 - Verify file follows expected backup object shape.
 
-## Known Gaps and Hardening Opportunities
+## :lock: Known Gaps and Hardening Opportunities
 
 - Strengthen at-rest protection for persisted WebAuthn credential store.
 - Bundle face model assets for fully offline biometric operation.
@@ -502,7 +502,7 @@ Cyber-Vault-main/
 - Added troubleshooting and hardening roadmap sections.
 - Synced documentation at root and app-level README.
 
-## Contributing Notes
+## :handshake: Contributing Notes
 
 When changing behavior, update both README copies:
 
@@ -517,6 +517,6 @@ Recommended contributor checks:
 4. Validate OCR extraction on text, image, and PDF files.
 5. Keep docs aligned with actual code paths and dependencies.
 
-## License
+## :page_facing_up: License
 
 MIT
