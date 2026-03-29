@@ -62,6 +62,8 @@ CyberVault currently provides:
 - Audit and threat monitoring dashboards.
 - OCR text extraction and optional AI-assisted Q&A.
 - Mission workflows and challenge/badge mechanics.
+- Guided demo mode onboarding with guest sessions and feature slides.
+- Cinematic intro + "Here We Go" transition flow before the welcome screen.
 
 ## ✅ What Is Implemented
 
@@ -81,6 +83,7 @@ CyberVault currently provides:
 - Fingerprint authentication using WebAuthn and platform authenticators.
 - Neural PIN checks for sensitive/unlock actions.
 - Session persistence with timeout/auto-lock behaviors.
+- Guest demo session entry (no login) with restricted capabilities.
 
 ### Operational features
 
@@ -106,6 +109,9 @@ CyberVault currently provides:
 - Search, file preview, export format recommendations.
 - Drag-and-drop upload and import interactions.
 - Mission Mode workflows and gamified challenges.
+- Cinematic intro and "Here We Go" transition sequence.
+- Demo mode splash walkthrough with countdown and feature highlights.
+- Demo session restrictions and cleanup on exit.
 
 ## 📊 Feature Matrix
 
@@ -116,6 +122,7 @@ CyberVault currently provides:
 | Face authentication | Implemented | face-api.js descriptor matching |
 | Iris authentication | Implemented | Custom template sampling/comparison |
 | Fingerprint authentication | Implemented | WebAuthn + platform authenticators |
+| Guided demo mode / guest session | Implemented | No login, 1-file limit, restricted access |
 | Encrypted backup export | Implemented | `.cybvlt` output |
 | Backup restore | Implemented | Decrypt + restore metadata/payload mapping |
 | OCR extraction | Implemented | Tesseract + pdf.js integration |
@@ -139,6 +146,7 @@ Important current behavior:
 - WebAuthn credential store persistence exists, but at-rest hardening for that store is a known improvement area.
 - Face models are currently loaded from external URLs at runtime.
 - Optional AI answering sends extracted text context to Groq only when configured.
+- Demo sessions are isolated and cleared on exit to avoid persistence of guest data.
 
 ## 🧰 Tech Stack
 
@@ -252,6 +260,8 @@ Typical files created via IPC:
 3. Encrypt payload with AES-GCM + IV.
 4. Compute checksum.
 5. Persist payload + metadata.
+
+Demo mode note: upload is limited to a single file per session.
 
 ### File view/decrypt
 
@@ -479,6 +489,12 @@ Cyber-Vault-main/
 - Introduce secure secret handling patterns beyond env file usage.
 
 ## 📝 Release Notes
+
+### 2026-03-29
+
+- Added cinematic intro and "Here We Go" transition prior to welcome.
+- Added guided demo mode splash with feature slides and guest session entry.
+- Added demo session restrictions and cleanup flow.
 
 ### 2026-02-13
 
