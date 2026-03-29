@@ -1,13 +1,8 @@
-# Cyber - Vault 🔐
+# Cyber - Vault
 
-CyberVault is a local-first desktop vault built with Electron + React for encrypting, organizing, auditing, and restoring sensitive files on-device.
+CyberVault is a local-first, zero-trust, AES-256-GCM vault with PBKDF2 key derivation, biometric MFA, integrity verification, audit telemetry, OCR indexing, and an integrated AI assistant built for on-device security and operational visibility.
 
-CyberVault is a security-focused desktop workspace that blends local-first encryption, multi-factor identity, and operational monitoring into a single vault experience. It is built to help teams handle sensitive files with confidence: encrypting on-device, verifying integrity, and surfacing audit-ready signals without relying on external storage by default. The UI pairs guided onboarding, demo access, and a deep feature set?OCR, threat insights, and chatbot assistance?so users can move from first launch to real workflows fast, while keeping control of data and context end-to-end. ????
-
-
-This README is intentionally detailed so maintainers and contributors can quickly understand what exists today, how it works, and how to operate it safely.
-
-## 🚀 Quick Start (2 min)
+## Quick Start (2 min)
 
 1. Open terminal in `cybervault-electron-react`.
 2. Install dependencies:
@@ -28,34 +23,34 @@ npm run dev
 - Upload a file and encrypt.
 - Run one backup snapshot from sidebar.
 
-## 📚 Table of Contents
+## Table of Contents
 
-- [🚀 Quick Start (2 min)](#quick-start-2-min)
-- [🧭 Project Snapshot](#project-snapshot)
+- [Quick Start (2 min)](#quick-start-2-min)
+- [Project Snapshot](#project-snapshot)
 - [??? Project Visual Overview](#project-visual-overview)
 - [?? AI Chatbot (OCR Intelligence)](#ai-chatbot-ocr-intelligence)
-- [✅ What Is Implemented](#what-is-implemented)
-- [📊 Feature Matrix](#feature-matrix)
-- [🛡️ Security Model](#security-model)
-- [🧰 Tech Stack](#tech-stack)
-- [🏗️ Architecture](#architecture)
-- [🗂️ Data Storage Layout](#data-storage-layout)
-- [🔐 Authentication and Identity Flows](#authentication-and-identity-flows)
-- [📁 Vault Workflows](#vault-workflows)
-- [🤖 OCR Assistant and AI Answering](#ocr-assistant-and-ai-answering)
-- [🎯 Mission Mode](#mission-mode)
-- [📈 Compliance and Monitoring Panels](#compliance-and-monitoring-panels)
-- [⚙️ Installation and Setup](#installation-and-setup)
-- [🛠️ Run and Build Commands](#run-and-build-commands)
-- [🔑 Environment Variables](#environment-variables)
-- [🧱 Project Structure](#project-structure)
-- [🧯 Troubleshooting](#troubleshooting)
-- [🔒 Known Gaps and Hardening Opportunities](#known-gaps-and-hardening-opportunities)
-- [🧪 Future Expansion (In Progress)](#future-expansion-in-progress)
-- [🤝 Contributing Notes](#contributing-notes)
-- [📄 License](#license)
+- [What Is Implemented](#what-is-implemented)
+- [Feature Matrix](#feature-matrix)
+- [Security Model](#security-model)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Data Storage Layout](#data-storage-layout)
+- [Authentication and Identity Flows](#authentication-and-identity-flows)
+- [Vault Workflows](#vault-workflows)
+- [OCR Assistant and AI Answering](#ocr-assistant-and-ai-answering)
+- [Mission Mode](#mission-mode)
+- [Compliance and Monitoring Panels](#compliance-and-monitoring-panels)
+- [Installation and Setup](#installation-and-setup)
+- [Run and Build Commands](#run-and-build-commands)
+- [Environment Variables](#environment-variables)
+- [Project Structure](#project-structure)
+- [Troubleshooting](#troubleshooting)
+- [Known Gaps and Hardening Opportunities](#known-gaps-and-hardening-opportunities)
+- [Future Expansion (In Progress)](#future-expansion-in-progress)
+- [Contributing Notes](#contributing-notes)
+- [License](#license)
 
-## 🧭 Project Snapshot
+## Project Snapshot
 
 CyberVault currently provides:
 
@@ -124,7 +119,22 @@ Why it matters and what makes it unique:
 - It keeps answers tied to vault context, helping with audits, investigations, and compliance reviews faster than generic chat tools.
 - It can run locally with heuristic extraction, and supports higher-fidelity answers via a model provider when configured.
 
-## ✅ What Is Implemented
+How it works in the app:
+
+- The chatbot pulls OCR output from images, PDFs, and text files, then builds a scoped context that maps to the currently selected vault content.
+- You can toggle **Context ON/OFF** to control whether the assistant uses extracted vault content or only your typed prompt.
+- The **Voice** option reads answers aloud for quick review or accessibility during investigations.
+
+Quick steps to use the AI chatbot:
+
+1. Open the vault and select a file (image, PDF, or text).
+2. Open the AI chatbot panel from the OCR/assistant area.
+3. Use **Context ON** to include extracted OCR content, or turn it **OFF** for general questions.
+4. Ask your question (e.g., "Summarize key risks" or "Extract dates and names").
+5. Toggle **Voice** if you want the response read aloud.
+6. Refine with follow?up prompts; the assistant stays tied to the same vault context until you change selection or turn context off.
+
+## What Is Implemented
 
 ### Core vault and crypto
 
@@ -172,7 +182,7 @@ Why it matters and what makes it unique:
 - Demo mode splash walkthrough with countdown and feature highlights.
 - Demo session restrictions and cleanup on exit.
 
-## 📊 Feature Matrix
+## Feature Matrix
 
 | Capability | Status | Notes |
 | --- | --- | --- |
@@ -190,7 +200,7 @@ Why it matters and what makes it unique:
 | Threat monitor + export | Implemented | Risk score + threat log |
 | Cross-platform packaging | Partial | Windows target configured in `electron-builder` |
 
-## 🛡️ Security Model
+## Security Model
 
 CyberVault is designed as a local-first vault with explicit tradeoffs:
 
@@ -207,7 +217,7 @@ Important current behavior:
 - AI chatbot uses OCR text locally; if OpenAI is configured, excerpts may be sent for higher-quality answers.
 - Demo sessions are isolated and cleared on exit to avoid persistence of guest data.
 
-## 🧰 Tech Stack
+## Tech Stack
 
 ### Desktop and UI
 
@@ -237,7 +247,7 @@ Important current behavior:
 - cross-env
 - dotenv
 
-## 🏗️ Architecture
+## Architecture
 
 High-level layering:
 
@@ -261,7 +271,7 @@ High-level layering:
 - Save audit/threat/backup exports.
 - Optional OpenAI API relay for OCR assistant answers.
 
-## 🗂️ Data Storage Layout
+## Data Storage Layout
 
 CyberVault uses multiple local stores for reliability and compatibility.
 
@@ -286,7 +296,7 @@ Typical files created via IPC:
 - `webauthn_credentials.json`
 - `cybervault_blobs/<dataId>.bin`
 
-## 🔐 Authentication and Identity Flows
+## Authentication and Identity Flows
 
 ### Signup flow
 
@@ -310,7 +320,7 @@ Typical files created via IPC:
 - Iris unlock.
 - Fingerprint unlock.
 
-## 📁 Vault Workflows
+## Vault Workflows
 
 ### File ingest
 
@@ -342,7 +352,7 @@ Demo mode note: upload is limited to a single file per session.
 3. Decrypt and validate payload.
 4. Rehydrate metadata and payload links.
 
-## 🤖 OCR Assistant and AI Answering
+## OCR Assistant and AI Answering
 
 ### Local extraction behavior
 
@@ -355,7 +365,7 @@ Demo mode note: upload is limited to a single file per session.
 - Local rule-based/section extraction fallback is available.
 - Assistant uses local heuristics by default; if OpenAI is configured, it can request model-generated answers.
 
-## 🎯 Mission Mode
+## Mission Mode
 
 Mission Mode includes:
 
@@ -363,7 +373,7 @@ Mission Mode includes:
 - Challenge actions (speed scan, tag master, encryption race, organizer goals).
 - Badge persistence in vault index.
 
-## 📈 Compliance and Monitoring Panels
+## Compliance and Monitoring Panels
 
 The application includes operational panels for:
 
@@ -375,7 +385,7 @@ The application includes operational panels for:
 
 These panels are designed for operational awareness and lightweight evidence generation.
 
-## ⚙️ Installation and Setup
+## Installation and Setup
 
 ### Prerequisites
 
@@ -393,7 +403,7 @@ From `cybervault-electron-react`:
 npm install
 ```
 
-## 🛠️ Run and Build Commands
+## Run and Build Commands
 
 Run from `cybervault-electron-react`.
 
@@ -427,7 +437,7 @@ npm run dist
 
 Builds renderer and generates installer/distributables.
 
-## 🔑 Environment Variables
+## Environment Variables
 
 Used by optional OCR assistant AI answering (`electron/main.js`):
 
@@ -440,7 +450,7 @@ Optional dev variable:
 
 - `VITE_DEV_SERVER_URL` (overrides default `http://localhost:5173` in dev Electron bootstrap)
 
-## 🧱 Project Structure
+## Project Structure
 
 ```text
 Cyber-Vault-main/
@@ -472,7 +482,7 @@ Cyber-Vault-main/
         matrix-theme.css
 ```
 
-## 🧯 Troubleshooting
+## Troubleshooting
 
 ### Fingerprint registration/authentication fails
 
@@ -505,7 +515,7 @@ Cyber-Vault-main/
 - Confirm backup file is not truncated/corrupted.
 - Verify file follows expected backup object shape.
 
-## 🔒 Known Gaps and Hardening Opportunities
+## Known Gaps and Hardening Opportunities
 
 - Strengthen at-rest protection for persisted WebAuthn credential store.
 - Bundle face model assets for fully offline biometric operation.
@@ -514,7 +524,7 @@ Cyber-Vault-main/
 - Add automated integration tests for backup/restore and threat/audit workflows.
 - Introduce secure secret handling patterns beyond env file usage.
 
-## 🧪 Future Expansion (In Progress)
+## Future Expansion (In Progress)
 
 The following roadmap items are **partially implemented** and under active development:
 
@@ -536,7 +546,7 @@ The following roadmap items are **partially implemented** and under active devel
 - Planned additions include stricter key lifecycle management, stronger local at-rest controls, and enterprise-grade security checks.
 - Current status: core encryption/auth paths are operational; advanced hardening controls are partially done and actively being expanded.
 
-## 🤝 Contributing Notes
+## Contributing Notes
 
 When changing behavior, update both README copies:
 
@@ -551,6 +561,6 @@ Recommended contributor checks:
 4. Validate OCR extraction on text, image, and PDF files.
 5. Keep docs aligned with actual code paths and dependencies.
 
-## 📄 License
+## License
 
 MIT
