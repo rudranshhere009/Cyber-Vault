@@ -17,7 +17,7 @@
   color:var(--text);
   background:linear-gradient(145deg,#040404,#0d0c0a 45%,#050505);
   font-family:'Outfit','Space Grotesk','Segoe UI',sans-serif;
-  font-size-adjust:0.52; -webkit-user-select:none; user-select:none;
+  font-size-adjust:none; -webkit-user-select:none; user-select:none;
 }
 .welcome-root input,.welcome-root textarea,.welcome-root select,
 .welcome-root [contenteditable="true"] { -webkit-user-select:text; user-select:text; }
@@ -339,6 +339,8 @@
   background:rgba(2,1,1,0.78);
   backdrop-filter:blur(6px);
   -webkit-backdrop-filter:blur(6px);
+  will-change: opacity;
+  transform: translateZ(0);
 }
 .hwg-overlay--in  .hwg-backdrop { animation:hwgBdIn  0.35s ease forwards; }
 .hwg-overlay--out .hwg-backdrop { animation:hwgBdOut 0.45s ease forwards; }
@@ -353,6 +355,8 @@
   border-radius:20px;
   overflow:hidden;
   box-shadow:0 0 60px rgba(255,120,20,0.18), 0 0 120px rgba(255,80,0,0.08), inset 0 1px 0 rgba(255,180,80,0.12);
+  will-change: transform, opacity;
+  transform: translateZ(0);
 }
 .hwg-card--in  { animation:hwgCardIn  0.42s cubic-bezier(0.22,1,0.36,1) forwards; }
 .hwg-card--out { animation:hwgCardOut 0.38s ease-in forwards; }
@@ -364,11 +368,7 @@
   display:flex; flex-direction:column; align-items:center;
   padding:30px 28px 26px; gap:12px;
 }
-.hwg-canvas {
-  width:220px; height:220px;
-  display:block; flex-shrink:0;
-  filter:drop-shadow(0 0 22px rgba(255,120,30,0.55));
-}
+
 .hwg-pop {
   font-family:'Outfit','Space Grotesk','Segoe UI',sans-serif;
   font-size:0.9rem;
@@ -408,6 +408,32 @@
   font-family:'Outfit','Space Grotesk','Segoe UI',sans-serif;
   font-size:1rem; letter-spacing:0.04em;
   color:rgba(255,180,100,0.55);
+}
+
+/* ── Rubik's Cube 3D ── */
+.hwg-rubik-scene {
+  width: 130px; height: 130px;
+  perspective: 380px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 4px;
+  filter: drop-shadow(0 0 18px rgba(255,130,30,0.45));
+}
+.hwg-rubik-cube {
+  width: 90px; height: 90px;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: rubikSpin 7s linear infinite;
+}
+.hwg-rubik-cube > div {
+  backface-visibility: visible;
+  box-shadow: 0 0 12px rgba(0,0,0,0.6);
+}
+@keyframes rubikSpin {
+  0%   { transform: rotateX(-20deg) rotateY(0deg); }
+  25%  { transform: rotateX(-20deg) rotateY(90deg); }
+  50%  { transform: rotateX(20deg)  rotateY(180deg); }
+  75%  { transform: rotateX(-10deg) rotateY(270deg); }
+  100% { transform: rotateX(-20deg) rotateY(360deg); }
 }
 
 /* Brand license */

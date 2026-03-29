@@ -80,6 +80,46 @@ const VaultClock = () => {
   );
 };
 
+/* ── ThreatPulse — ultra-thin signal widget ── */
+const ThreatPulse = () => {
+  const [bars, setBars] = useState(() => Array.from({ length: 16 }, () => Math.random()));
+  const [threat, setThreat] = useState('LOW');
+  const [seed, setSeed] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setBars(Array.from({ length: 16 }, () => Math.random()));
+      setSeed(s => s + 1);
+    }, 800);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const levels = ['LOW', 'LOW', 'LOW', 'TRACE', 'LOW', 'NOMINAL'];
+    setThreat(levels[seed % levels.length]);
+  }, [seed]);
+
+  const color = threat === 'TRACE' ? '#ffdd55' : threat === 'NOMINAL' ? '#4fffb0' : '#ff7a30';
+
+  return (
+    <div className="cv-threatpulse">
+      <div className="cv-tp-bars">
+        {bars.map((h, i) => (
+          <span
+            key={i}
+            className="cv-tp-bar"
+            style={{
+              height: `${8 + h * 14}px`,
+              background: color,
+              opacity: 0.3 + h * 0.7,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 /* ── Info Strip — mobile-only fill widgets ── */
 const InfoStrip = ({ visible }) => (
   <div className={`cv-info-strip${visible ? ' cv-info-strip--show' : ''}`}>
@@ -111,12 +151,8 @@ const InfoStrip = ({ visible }) => (
       ))}
     </div>
 
-    {/* Hex vault ID badge */}
-    <div className="cv-hex-badge">
-      <span className="cv-hex-label">Vault ID</span>
-      <span className="cv-hex-code">0xF3A9·C72E·4B1D</span>
-      <span className="cv-hex-status">Active</span>
-    </div>
+    {/* Threat pulse — thin widget */}
+    <ThreatPulse />
 
     {/* Live vault clock */}
     <VaultClock />

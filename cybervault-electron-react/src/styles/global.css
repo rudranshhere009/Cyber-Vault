@@ -33,6 +33,39 @@ button, input, select, textarea { font: inherit; }
   background: rgba(255, 138, 36, 0.22);
   color: inherit;
 }
+/* Global scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(121, 163, 217, 0.55) transparent;
+}
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(121, 163, 217, 0.45);
+  border-radius: 999px;
+  border: 1px solid rgba(159, 179, 223, 0.35);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(93, 143, 199, 0.65);
+}
+body.theme-night * {
+  scrollbar-color: rgba(255, 153, 73, 0.7) rgba(0, 0, 0, 0.08);
+}
+body.theme-night ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.08);
+}
+body.theme-night ::-webkit-scrollbar-thumb {
+  background: rgba(255, 153, 73, 0.6);
+  border-color: rgba(255, 153, 73, 0.45);
+}
+body.theme-night ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 122, 23, 0.8);
+}
 body.app-shell-mode,
 body.app-shell-mode * {
   -webkit-user-select: none;
@@ -1200,13 +1233,25 @@ body:not(.theme-night) .upload-icon-text { color: #1f2937; background: linear-gr
   place-items: center;
   background: #050403;
   animation: demoOverlayIn 0.5s cubic-bezier(0.22,1,0.36,1) both;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.demo-splash-open {
   overflow: hidden;
+  height: 100vh;
 }
 .demo-entry-overlay--exit {
   animation: demoOverlayOut 0.45s ease forwards;
 }
 @keyframes demoOverlayIn  { from { opacity:0; } to { opacity:1; } }
 @keyframes demoOverlayOut { from { opacity:1; } to { opacity:0; } }
+
+@media (max-height: 760px) {
+  .demo-entry-overlay {
+    place-items: start center;
+    padding: 16px 12px;
+  }
+}
 
 /* ── CYBER HEX GRID CANVAS BACKGROUND ── */
 .demo-hex-canvas {

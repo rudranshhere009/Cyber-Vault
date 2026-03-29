@@ -654,6 +654,11 @@ function App() {
   const [profileNotice, setProfileNotice] = useState('');
   const [demoAccessNotice, setDemoAccessNotice] = useState({ open: false, feature: '' });
   const [demoSplashOpen, setDemoSplashOpen] = useState(false);
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.body.classList.toggle('demo-splash-open', demoSplashOpen);
+    return () => document.body.classList.remove('demo-splash-open');
+  }, [demoSplashOpen]);
 
   const [page, setPage] = useState('welcome');
   const [welcomeStartStage, setWelcomeStartStage] = useState('intro');
@@ -713,7 +718,6 @@ function App() {
         // Only resolves when user clicks "Enter CyberVault"
         demoSkipRef.current = resolve;
       });
-      await clearDemoSessionArtifacts('demo@cybervault.local', []);
       const demoSession = {
         email: 'demo@cybervault.local',
         username: 'Demo User',
@@ -733,6 +737,7 @@ function App() {
       setMode('login');
       setPage('vault');
       showNotification('> demo.mode.active.one.file.limit.enabled', 'info');
+      await clearDemoSessionArtifacts('demo@cybervault.local', []);
     } finally {
       demoSkipRef.current = null;
       // splash unmounts itself via onDone after exit animation
@@ -3413,7 +3418,7 @@ function App() {
                   </button>
                   <button
                     className="profile-badge"
-                    onClick={() => setProfileOpen(true)}
+                    onClick={() => (session?.demo ? handleRestrictedDemoFeature('Profile Center') : setProfileOpen(true))}
                     aria-label="Open profile settings"
                   >
                     <span className="profile-avatar" style={{ '--accent': profile.accent }}>

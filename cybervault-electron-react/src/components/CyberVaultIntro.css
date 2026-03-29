@@ -1318,53 +1318,49 @@
 }
 
 /* ── Hex ID badge ── */
-.cv-hex-badge {
+/* ── ThreatPulse widget — ultra thin ── */
+.cv-threatpulse {
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 5px 10px;
   border: 1px solid rgba(255, 154, 60, 0.12);
   background: rgba(255, 154, 60, 0.03);
   box-sizing: border-box;
 }
 
-.cv-hex-label {
+.cv-tp-label {
   font-family: var(--mono);
-  font-size: 0.52rem;
+  font-size: 0.46rem;
+  letter-spacing: 0.16em;
+  color: rgba(255, 195, 118, 0.35);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.cv-tp-bars {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 22px;
+}
+
+.cv-tp-bar {
+  flex: 1;
+  border-radius: 1px;
+  display: block;
+  transition: height 0.5s ease, opacity 0.5s ease;
+}
+
+.cv-tp-threat {
+  font-family: var(--mono);
+  font-size: 0.46rem;
   letter-spacing: 0.14em;
-  color: rgba(255, 195, 118, 0.38);
   text-transform: uppercase;
-}
-
-.cv-hex-code {
-  font-family: var(--mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.09em;
-  color: rgba(255, 220, 160, 0.6);
-  text-shadow: 0 0 12px rgba(255, 154, 60, 0.3);
-  animation: cvHexFlicker 6s step-end infinite;
-}
-
-@keyframes cvHexFlicker {
-  0%, 92%, 100% { opacity: 0.9; }
-  93%            { opacity: 0.3; }
-  94%            { opacity: 0.9; }
-  96%            { opacity: 0.2; }
-  97%            { opacity: 1; }
-}
-
-.cv-hex-status {
-  font-family: var(--mono);
-  font-size: 0.5rem;
-  letter-spacing: 0.12em;
-  color: #4fffb0;
-  text-shadow: 0 0 8px rgba(79, 255, 176, 0.4);
-  text-transform: uppercase;
-  border: 1px solid rgba(79, 255, 176, 0.25);
-  padding: 2px 7px;
-  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 0.4s ease;
 }
 
 /* ── Vault Clock widget ── */

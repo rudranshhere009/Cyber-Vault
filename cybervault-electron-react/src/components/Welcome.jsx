@@ -485,11 +485,55 @@ function MatrixRain({ opacity = 0.5 }) {
   return <canvas ref={ref} className="wc-matrix-canvas" style={{ opacity }} aria-hidden="true" />;
 }
 
+/* ── Rubik's Cube 3D (pure CSS/DOM) ── */
+function RubiksCube() {
+  const FACE_COLORS = {
+    top:    ['#ff6a00','#ffb040','#ff8820', '#ff6a00','#ffb040','#ff8820', '#ff6a00','#ffb040','#ff8820'],
+    bottom: ['#1a9e4a','#22cc5e','#14803c', '#1a9e4a','#22cc5e','#14803c', '#1a9e4a','#22cc5e','#14803c'],
+    front:  ['#cc2200','#ff3a1a','#e02810', '#cc2200','#ff3a1a','#e02810', '#cc2200','#ff3a1a','#e02810'],
+    back:   ['#e08000','#ffa020','#c86000', '#e08000','#ffa020','#c86000', '#e08000','#ffa020','#c86000'],
+    left:   ['#1a55cc','#2e6ef5','#1440a8', '#1a55cc','#2e6ef5','#1440a8', '#1a55cc','#2e6ef5','#1440a8'],
+    right:  ['#d4c000','#ffe020','#b8a800', '#d4c000','#ffe020','#b8a800', '#d4c000','#ffe020','#b8a800'],
+  };
+
+  const faceStyle = (transform) => ({
+    position: 'absolute', width: '90px', height: '90px',
+    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+    gridTemplateRows: 'repeat(3, 1fr)', gap: '3px', padding: '3px',
+    background: '#111', borderRadius: '4px',
+    transform,
+  });
+
+  const renderFace = (name, transform) => (
+    <div style={faceStyle(transform)} key={name}>
+      {FACE_COLORS[name].map((c, i) => (
+        <div key={i} style={{
+          background: c,
+          borderRadius: '2px',
+          boxShadow: `inset 0 0 6px rgba(0,0,0,0.45), 0 0 4px ${c}66`,
+        }}/>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="hwg-rubik-scene">
+      <div className="hwg-rubik-cube">
+        {renderFace('front',  'rotateY(0deg)   translateZ(45px)')}
+        {renderFace('back',   'rotateY(180deg) translateZ(45px)')}
+        {renderFace('left',   'rotateY(-90deg) translateZ(45px)')}
+        {renderFace('right',  'rotateY(90deg)  translateZ(45px)')}
+        {renderFace('top',    'rotateX(90deg)  translateZ(45px)')}
+        {renderFace('bottom', 'rotateX(-90deg) translateZ(45px)')}
+      </div>
+    </div>
+  );
+}
+
 /* ── Here We Go Popup ── */
 function HereWeGoPopup({ onDone }) {
   const [phase, setPhase] = useState('in');
   const [count, setCount] = useState(7);
-  const canvasRef = useRef(null);
 
   useEffect(() => {
     const id = setInterval(() => setCount(c => c - 1), 1000);
@@ -502,121 +546,12 @@ function HereWeGoPopup({ onDone }) {
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [onDone]);
 
-  /* Infinite symbol with heavy 3D effect drawn on canvas */
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const W = 220, H = 220;
-    canvas.width = W; canvas.height = H;
-    let animId, t = 0;
-
-    function drawInfinity() {
-      ctx.clearRect(0, 0, W, H);
-      const cx = W / 2, cy = H / 2;
-      const segs = 220;
-      const ry = t * 0.55;
-      const rx = 0.8 + Math.sin(t * 0.5) * 0.25;
-      const rz = Math.sin(t * 0.35) * 0.18;
-      const cosY = Math.cos(ry), sinY = Math.sin(ry);
-      const cosX = Math.cos(rx), sinX = Math.sin(rx);
-      const cosZ = Math.cos(rz), sinZ = Math.sin(rz);
-
-      const pts = [];
-      for (let i = 0; i < segs; i++) {
-        const u = (i / segs) * Math.PI * 2;
-        const s = Math.sin(u);
-        const c = Math.cos(u);
-
-        // Lemniscate-like infinity in 3D
-        let x = s * 70;
-        let y = s * c * 58;
-        let z = Math.cos(u * 2 + t * 1.4) * 22;
-
-        // rotate Y, X, then Z for exaggerated 3D
-        let x1 = x * cosY - z * sinY;
-        let z1 = x * sinY + z * cosY;
-        let y1 = y * cosX - z1 * sinX;
-        let z2 = y * sinX + z1 * cosX;
-        let x2 = x1 * cosZ - y1 * sinZ;
-        let y2 = x1 * sinZ + y1 * cosZ;
-
-        const perspective = 1.25 / (1.85 - z2 / 90);
-        const px = cx + x2 * perspective;
-        const py = cy + y2 * perspective;
-        pts.push({ px, py, z: z2, p: perspective });
-      }
-
-      const segments = [];
-      for (let i = 0; i < pts.length; i++) {
-        const p1 = pts[i];
-        const p2 = pts[(i + 1) % pts.length];
-        const depth = (p1.z + p2.z) * 0.5;
-        segments.push({ p1, p2, depth });
-      }
-      segments.sort((a, b) => a.depth - b.depth);
-
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      for (const seg of segments) {
-        const depthNorm = Math.max(0, Math.min(1, (seg.depth + 30) / 60));
-        const alpha = 0.25 + depthNorm * 0.7;
-        ctx.strokeStyle = `rgba(255,${Math.floor(140 + 90 * depthNorm)},${Math.floor(40 + 40 * depthNorm)},${Math.min(0.95, alpha)})`;
-        ctx.lineWidth = 2.2 + 3.2 * depthNorm;
-        ctx.shadowBlur = 18 + 22 * depthNorm;
-        ctx.shadowColor = 'rgba(255,120,40,0.75)';
-        ctx.beginPath();
-        ctx.moveTo(seg.p1.px, seg.p1.py);
-        ctx.lineTo(seg.p2.px, seg.p2.py);
-        ctx.stroke();
-
-        ctx.strokeStyle = `rgba(255,235,190,${0.18 + depthNorm * 0.55})`;
-        ctx.lineWidth = 1.2 + 1.1 * depthNorm;
-        ctx.shadowBlur = 0;
-        ctx.beginPath();
-        ctx.moveTo(seg.p1.px, seg.p1.py);
-        ctx.lineTo(seg.p2.px, seg.p2.py);
-        ctx.stroke();
-
-        ctx.strokeStyle = `rgba(140,70,20,${0.22 + depthNorm * 0.35})`;
-        ctx.lineWidth = 3.2 + 3.6 * depthNorm;
-        ctx.beginPath();
-        ctx.moveTo(seg.p1.px, seg.p1.py);
-        ctx.lineTo(seg.p2.px, seg.p2.py);
-        ctx.stroke();
-      }
-      ctx.restore();
-
-      for (let i = 0; i < pts.length; i += 5) {
-        const p = pts[i];
-        const depthNorm = Math.max(0, Math.min(1, (p.z + 30) / 60));
-        const alpha = 0.25 + depthNorm * 0.8;
-        const r = Math.max(1.2, 2.3 * p.p);
-        ctx.beginPath();
-        ctx.arc(p.px, p.py, r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,205,130,${Math.min(1, alpha)})`;
-        ctx.fill();
-      }
-
-      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 82);
-      g.addColorStop(0, 'rgba(255,140,30,0.22)');
-      g.addColorStop(0.6, 'rgba(255,110,20,0.08)');
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, 78, 0, Math.PI * 2); ctx.fill();
-
-      t += 0.02;
-      animId = requestAnimationFrame(drawInfinity);
-    }
-    drawInfinity();
-    return () => cancelAnimationFrame(animId);
-  }, []);
-
   return (
     <div className={`hwg-overlay hwg-overlay--${phase}`}>
       <div className="hwg-backdrop" />
       <div className={`hwg-card hwg-card--${phase}`}>
         <div className="hwg-inner">
-          <canvas ref={canvasRef} className="hwg-canvas" />
+          <RubiksCube />
           <div className="hwg-pop">SECURE ENTRY</div>
           <div className="hwg-label">HERE WE GO</div>
           <div className="hwg-bar-wrap">
