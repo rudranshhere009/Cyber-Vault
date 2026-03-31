@@ -333,6 +333,7 @@
   position:fixed; inset:0; z-index:99999;
   display:flex; align-items:center; justify-content:center;
   pointer-events:all;
+  font-family:'Outfit','Space Grotesk','Segoe UI',sans-serif;
 }
 .hwg-backdrop {
   position:absolute; inset:0;
@@ -382,14 +383,33 @@
   box-shadow:0 10px 22px rgba(255,122,23,0.35), inset 0 1px 0 rgba(255,230,200,0.5);
 }
 .hwg-label {
-  font-family:'Outfit','Space Grotesk','Segoe UI',sans-serif;
-  font-size:1.55rem; font-weight:700; letter-spacing:0.22em;
+  font-family:'Cinzel', serif;
+  font-size:1.55rem; font-weight:700; letter-spacing:0.08em;
   color:transparent;
   background:linear-gradient(180deg,#ffe5c0 0%,#ffaa44 50%,#c06010 100%);
   background-clip:text; -webkit-background-clip:text;
   text-shadow:none;
   filter:drop-shadow(0 0 14px rgba(255,140,30,0.5));
-  text-transform:uppercase;
+  text-transform:none;
+  display:flex;
+  align-items:flex-end;
+  gap:0.45em;
+}
+.hwg-word {
+  display:inline-flex;
+  align-items:flex-end;
+  gap:0.02em;
+  color:transparent;
+  background:linear-gradient(180deg,#ffe5c0 0%,#ffaa44 50%,#c06010 100%);
+  background-clip:text; -webkit-background-clip:text;
+}
+.hwg-word-initial {
+  font-size:1.22em;
+  line-height:0.9;
+}
+.hwg-word-rest {
+  font-size:0.85em;
+  line-height:1;
 }
 .hwg-bar-wrap {
   width:100%; height:3px;

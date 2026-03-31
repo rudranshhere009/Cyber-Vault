@@ -553,7 +553,14 @@ function HereWeGoPopup({ onDone }) {
         <div className="hwg-inner">
           <RubiksCube />
           <div className="hwg-pop">SECURE ENTRY</div>
-          <div className="hwg-label">HERE WE GO</div>
+          <div className="hwg-label" aria-label="Here We Go">
+            {['Here','We','Go'].map((word) => (
+              <span key={word} className="hwg-word">
+                <span className="hwg-word-initial">{word.slice(0, 1)}</span>
+                <span className="hwg-word-rest">{word.slice(1)}</span>
+              </span>
+            ))}
+          </div>
           <div className="hwg-bar-wrap">
             <div className="hwg-bar-fill" style={{ animationDuration: '7s' }} />
           </div>

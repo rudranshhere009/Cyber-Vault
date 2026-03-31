@@ -36,35 +36,35 @@ button, input, select, textarea { font: inherit; }
 /* Global scrollbars */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(121, 163, 217, 0.55) transparent;
+  scrollbar-color: rgba(255, 186, 96, 0.12) transparent;
 }
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 1px;
+  height: 1px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(121, 163, 217, 0.45);
+  background: rgba(255, 186, 96, 0.12);
   border-radius: 999px;
-  border: 1px solid rgba(159, 179, 223, 0.35);
+  border: none;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(93, 143, 199, 0.65);
+  background: rgba(255, 186, 96, 0.18);
 }
 body.theme-night * {
-  scrollbar-color: rgba(255, 153, 73, 0.7) rgba(0, 0, 0, 0.08);
+  scrollbar-color: rgba(255, 186, 96, 0.12) transparent;
 }
 body.theme-night ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.08);
+  background: transparent;
 }
 body.theme-night ::-webkit-scrollbar-thumb {
-  background: rgba(255, 153, 73, 0.6);
-  border-color: rgba(255, 153, 73, 0.45);
+  background: rgba(255, 186, 96, 0.12);
+  border: none;
 }
 body.theme-night ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 122, 23, 0.8);
+  background: rgba(255, 186, 96, 0.18);
 }
 body.app-shell-mode,
 body.app-shell-mode * {
