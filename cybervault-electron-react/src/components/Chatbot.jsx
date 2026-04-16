@@ -17,19 +17,50 @@ const getDecryptedFileBuffer = async (file, { idbGet, deriveQuantumKey, generate
 			showNotification('> neural.key.required.for.decryption', 'error');
 			return null;
 		}
-		const key = await deriveQuantumKey(pwd, new Uint8Array(file.salt));
-		const ciphertext = file.encryptedData ? new Uint8Array(file.encryptedData) : new Uint8Array(await idbGet(file.dataId));
-		const decrypted = await crypto.subtle.decrypt(
-			{ name: 'AES-GCM', iv: new Uint8Array(file.iv) },
-			key,
-			ciphertext
-		);
+
+		const salt = new Uint8Array(file.salt || []);
+		const iv = new Uint8Array(file.iv || []);
+
+		// Reconstruct ciphertext from possible storage shapes
+		let ciphertext = null;
+		if (file.encryptedData) {
+			ciphertext = new Uint8Array(file.encryptedData);
+		} else if (file.dataId) {
+			try {
+				const fromIdb = await idbGet(file.dataId);
+				if (fromIdb instanceof ArrayBuffer) ciphertext = new Uint8Array(fromIdb);
+				else if (Array.isArray(fromIdb)) ciphertext = new Uint8Array(fromIdb);
+				else if (fromIdb && fromIdb.data) ciphertext = new Uint8Array(fromIdb.data.buffer || fromIdb.data);
+				else if (fromIdb && fromIdb.buffer) ciphertext = new Uint8Array(fromIdb.buffer);
+				else if (fromIdb) ciphertext = new Uint8Array(fromIdb);
+			} catch (e) {
+				// ignore and fallback to disk read
+			}
+			if ((!ciphertext || ciphertext.length === 0) && window.electronAPI?.readVaultBlob) {
+				try {
+					const raw = await window.electronAPI.readVaultBlob(`${file.dataId}.bin`);
+					if (Array.isArray(raw)) ciphertext = new Uint8Array(raw);
+				} catch (e) {
+					// ignore
+				}
+			}
+		}
+
+		if (!ciphertext || ciphertext.length === 0) {
+			console.error('Decryption failed: missing encrypted payload', { id: file.id, dataId: file.dataId, hasEncryptedData: Boolean(file.encryptedData), saltLength: (salt && salt.length) || 0, ivLength: (iv && iv.length) || 0 });
+			showNotification(`> decryption.failed.missing_encrypted_payload`, 'error');
+			return null;
+		}
+
+		const key = await deriveQuantumKey(pwd, salt);
+		const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
 		const checksum = await generateChecksum(decrypted);
 		if (checksum !== file.checksum) {
 			throw new Error('File integrity verification failed');
 		}
-        return decrypted;
+		return decrypted;
 	} catch (err) {
+		console.error('Decryption exception for file', { id: file?.id, name: file?.name, dataId: file?.dataId, error: err && (err.stack || err.message || String(err)) });
 		showNotification(`> decryption.failed.${err.message}`, 'error');
 		return null;
 	}
@@ -501,7 +532,9 @@ const Chatbot = ({ files, open, onClose, idbGet, deriveQuantumKey, enc, dec, gen
 		const fileQuery = useFileContext || isFileRelatedQuestion(userInput);
 
 		const webGroqAnswer = async (reqPayload) => {
-			const response = await fetch('/api/groq-ocr-answer', {
+			const base = import.meta.env.VITE_API_BASE_URL || '';
+			const url = base ? `${String(base).replace(/\/$$/, '')}/api/groq-ocr-answer` : '/api/groq-ocr-answer';
+			const response = await fetch(url, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(reqPayload || {}),

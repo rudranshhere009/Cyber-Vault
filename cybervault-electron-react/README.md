@@ -136,9 +136,11 @@ CyberVault is designed as a local-first vault with explicit tradeoffs:
 
 Important current behavior:
 
-- WebAuthn credential store persistence exists, but at-rest hardening for that store is a known improvement area.
-- Face models are currently loaded from external URLs at runtime.
-- Optional AI answering sends extracted text context to Groq only when configured.
+- WebAuthn credential store persistence exists and is read/written via IPC handlers (`read-credential-store` / `write-credential-store`). At-rest hardening for that store is a known improvement area.
+- Face models are currently loaded from external URLs at runtime; bundling models for offline operation is a planned hardening task.
+- AI assistant now uses Groq chat completions (calls to `https://api.groq.com/openai/v1/chat/completions`) when `GROQ_API_KEY` is configured. OpenAI-based vision OCR has been disabled; use `GOOGLE_VISION_API_KEY` or local Tesseract fallback instead.
+- The main process loads environment from `.env` and `.env.local` (the latter overrides), and a default dev server URL can be overridden with `VITE_DEV_SERVER_URL`.
+- In production builds a Content Security Policy is applied and the renderer preload is `preload.cjs` (preload IPC surface exposed with `contextIsolation: true` and `sandbox: false`).
 
 ## 🧰 Tech Stack
 
@@ -188,11 +190,12 @@ High-level layering:
 
 ### Main process responsibilities
 
-- Read/write credential store.
-- Read/write vault index and app state.
-- Read/write/delete encrypted blob files.
-- Save audit/threat/backup exports.
-- Optional Groq API relay for OCR assistant answers.
+- Read/write credential store via IPC (`read-credential-store`, `write-credential-store`).
+- Initialize and expose a small SQLite/Sequelize-backed DB used for user/login/file ownership insights and simple analytics.
+- Read/write vault index and app state (with automatic repair behavior if JSON parse fails).
+- Read/write/delete encrypted blob files (`cybervault_blobs` directory) via IPC handlers.
+- Save audit reports and PDF exports, threat logs, and encrypted backup files via system save dialogs.
+- Provide AI assistant relay and OCR helpers: Groq-based Q&A (`groq-ocr-answer`), Google Vision OCR helper (`google-ocr-extract-text`), and a disabled OpenAI vision bridge (`openai-ocr-extract-text` returns provider_disabled).
 
 ## 🗂️ Data Storage Layout
 
@@ -284,7 +287,9 @@ Typical files created via IPC:
 ### Question answering behavior
 
 - Local rule-based/section extraction fallback is available.
-- If Groq env vars are set, assistant can request model-generated answers.
+- When `GROQ_API_KEY` is configured the assistant uses Groq chat completions for grounding and answering. The default model is controlled by `GROQ_MODEL` (default: `llama-3.3-70b-versatile`).
+- Large file ingestion is truncated by `GROQ_FILE_BASE64_MAX_CHARS` (env var) when building context for model calls; this helps avoid oversized requests.
+- OpenAI vision/ocr integration has been intentionally disabled; use `GOOGLE_VISION_API_KEY` or Tesseract fallback.
 
 ## 🎯 Mission Mode
 
@@ -395,9 +400,21 @@ Used by optional OCR assistant AI answering (`electron/main.js`):
 - `GROQ_API_KEY`
 - `GROQ_MODEL` (default `llama-3.3-70b-versatile`)
 
+Optional tuning:
+
+- `GROQ_FILE_BASE64_MAX_CHARS` (limits base64 chars sent to Groq for file grounding; default in code is 24000)
+
 Optional OCR vision provider:
 
 - `GOOGLE_VISION_API_KEY`
+
+Dev/override:
+
+- `VITE_DEV_SERVER_URL` (overrides default `http://localhost:5173` in dev Electron bootstrap)
+
+Notes:
+
+- The main process loads `.env` and then `.env.local` (override) from the app root.
 
 Optional dev variable:
 

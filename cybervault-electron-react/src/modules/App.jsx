@@ -1,4 +1,5 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import pako from 'pako';
 import Welcome from '../components/Welcome'; // Import welcome page
 
 const OCRSection = lazy(() => import('../components/Chatbot'));
@@ -824,6 +825,9 @@ function App() {
   const filesHydratedRef = useRef(false);
   const [masterPassword, setMasterPassword] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [analysisRunning, setAnalysisRunning] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
 
   const [viewingFile, setViewingFile] = useState(null);
   const [viewingFileContent, setViewingFileContent] = useState(null);
@@ -2311,16 +2315,24 @@ function App() {
       const iv = crypto.getRandomValues(new Uint8Array(12));
       const key = await deriveQuantumKey(password, salt);
       const fileBuffer = await readFileAsArrayBuffer(file);
-      const encryptedData = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, fileBuffer);
+
+      // Do NOT compress on initial upload — compression is an explicit "Optimize Storage" action.
+      // Keep payload as the original file buffer so uploads are stored uncompressed by default.
+      const payload = fileBuffer;
+      const compressed = null;
+      const encryptedData = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, payload);
       const dataId = `${session?.email || 'anon'}_${Date.now()}_${Math.random()}`;
       await idbPut(dataId, encryptedData);
       if (window.electronAPI?.writeVaultBlob) {
-        try { await window.electronAPI.writeVaultBlob(`${dataId}.bin`, Array.from(new Uint8Array(encryptedData))); } catch {}
+        try { await window.electronAPI.writeVaultBlob(`${dataId}.bin`, Array.from(new Uint8Array(encryptedData))); } catch (e) { console.warn('writeVaultBlob failed', e); }
       }
+
       const encryptedFile = {
         id: Date.now() + Math.random(),
         name: file.name,
         size: file.size,
+        originalSize: file.size,
+        compressed: false,
         type: file.type,
         uploadDate: new Date().toISOString(),
         dataId,
@@ -2367,6 +2379,184 @@ function App() {
     });
     addActivityEvent('move', `${file.name} moved to top`);
     showNotification(`> ${file.name}.moved.to.top`, 'success');
+  }
+
+  async function optimizeExistingFile(file, password) {
+    if (!file || !file.dataId) return;
+    try {
+      showNotification(`> optimizing.${file.name}`, 'info');
+      const encryptedBlob = await idbGet(file.dataId);
+      if (!encryptedBlob) {
+        showNotification(`> file.data.missing.${file.name}`, 'error');
+        return;
+      }
+
+      // Reconstruct ArrayBuffer from stored value (could be Uint8Array[]) or ArrayBuffer
+      let encBuffer;
+      if (encryptedBlob instanceof ArrayBuffer) encBuffer = encryptedBlob;
+      else if (Array.isArray(encryptedBlob)) encBuffer = new Uint8Array(encryptedBlob).buffer;
+      else if (encryptedBlob && encryptedBlob.data) encBuffer = encryptedBlob.data.buffer || encryptedBlob.data;
+      else encBuffer = encryptedBlob;
+
+      const salt = new Uint8Array(file.salt || []);
+      const iv = new Uint8Array(file.iv || []);
+      const key = await deriveQuantumKey(password, salt);
+      let decrypted;
+      try {
+        decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, encBuffer);
+      } catch (dErr) {
+        console.error('Decrypt failed for optimize', dErr);
+        showNotification(`> decrypt.failed.${file.name}`, 'error');
+        return;
+      }
+
+      // Attempt compression
+      let compressed = null;
+      try {
+        const input = new Uint8Array(decrypted);
+        const deflated = pako.deflate(input);
+        if (deflated && deflated.length + 1024 < input.length) compressed = deflated;
+      } catch (cErr) {
+        console.warn('Compression failed during optimize', cErr);
+      }
+
+      if (!compressed) {
+        showNotification(`> no.gain.from.compression.${file.name}`, 'info');
+        return 0;
+      }
+
+      // Re-encrypt compressed payload
+      const newSalt = crypto.getRandomValues(new Uint8Array(16));
+      const newIv = crypto.getRandomValues(new Uint8Array(12));
+      const newKey = await deriveQuantumKey(password, newSalt);
+      const encryptedNew = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: newIv }, newKey, compressed.buffer);
+
+      // Store back to idb and optional disk blob
+      await idbPut(file.dataId, encryptedNew);
+      if (window.electronAPI?.writeVaultBlob) {
+        try { await window.electronAPI.writeVaultBlob(`${file.dataId}.bin`, Array.from(new Uint8Array(encryptedNew))); } catch (e) { console.warn('writeVaultBlob failed', e); }
+      }
+
+      // Update metadata (also update checksum to match the new encrypted payload)
+      const newChecksum = await generateChecksum(compressed.buffer);
+      updateFileRecord(file.id, () => ({
+        size: compressed.length,
+        originalSize: file.originalSize || file.size,
+        compressed: true,
+        salt: Array.from(newSalt),
+        iv: Array.from(newIv),
+        checksum: newChecksum
+      }));
+
+      const saved = (file.originalSize || file.size || 0) - compressed.length;
+      return saved > 0 ? saved : 0;
+
+      addActivityEvent('optimize', `${file.name} optimized`);
+      showNotification(`> optimization.complete.${file.name}`, 'success');
+    } catch (err) {
+      console.error('optimizeExistingFile error', err);
+      showNotification(`> optimization.failed.${file.name}`, 'error');
+      return 0;
+    }
+  }
+
+  async function optimizeVaultStorage() {
+    if (!files || files.length === 0) { showNotification('> no.files.to.optimize', 'info'); return; }
+    let pwd = masterPassword;
+    // If no master password in state, ask the user quickly (fallback to prompt for immediate testing)
+    if (!pwd || pwd.length < 8) {
+      const p = prompt('Enter master password to optimize storage (required)');
+      if (!p) { showNotification('> master.password.required.for.optimize', 'error'); return; }
+      pwd = p;
+    }
+    setIsOptimizing(true);
+    let totalSaved = 0; let filesOptimized = 0;
+    try {
+      for (const f of files) {
+        if (f.compressed) continue;
+        updateFileRecord(f.id, () => ({ optimizing: true }));
+        // eslint-disable-next-line no-await-in-loop
+        const saved = await optimizeExistingFile(f, pwd) || 0;
+        updateFileRecord(f.id, () => ({ optimizing: false }));
+        if (saved > 0) {
+          totalSaved += saved;
+          filesOptimized += 1;
+        }
+      }
+    } finally {
+      setIsOptimizing(false);
+      if (filesOptimized > 0) {
+        const mb = (totalSaved / (1024*1024)).toFixed(2);
+        showNotification(`> optimization.reclaimed.${mb}MB.from.${filesOptimized}.files`, 'success');
+        console.log(`Optimize: reclaimed ${totalSaved} bytes across ${filesOptimized} files`);
+      } else {
+        showNotification('> optimization.no.files.reclaimed', 'info');
+        console.log('Optimize: no bytes reclaimed');
+      }
+    }
+  }
+
+  async function analyzeCompressibility() {
+    if (!files || files.length === 0) { showNotification('> no.files.to.analyze', 'info'); return; }
+    let pwd = masterPassword;
+    if (!pwd || pwd.length < 8) {
+      const p = prompt('Enter master password to analyze compressibility (required)');
+      if (!p) { showNotification('> master.password.required.for.analyze', 'error'); return; }
+      pwd = p;
+    }
+    setAnalysisRunning(true);
+    setAnalysisResult(null);
+    try {
+      let totalEstimatedSaved = 0;
+      const candidates = [];
+      const SAMPLE_THRESHOLD = 20 * 1024 * 1024; // 20 MB
+      const SAMPLE_SIZE = 2 * 1024 * 1024; // 2 MB
+      for (const f of files) {
+        // skip already compressed
+        if (f.compressed) continue;
+        try {
+          const enc = await getEncryptedBytes(f);
+          if (!enc) { console.warn('analyze: missing blob', f.name); continue; }
+          const salt = new Uint8Array(f.salt || []);
+          const iv = new Uint8Array(f.iv || []);
+          const key = await deriveQuantumKey(pwd, salt);
+          let decrypted;
+          try {
+            decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, enc.buffer || enc);
+          } catch (dErr) {
+            console.warn('analyze: decrypt failed for', f.name, dErr);
+            continue;
+          }
+          const u8 = new Uint8Array(decrypted);
+          let estimatedCompressedLength = 0;
+          if (u8.length > SAMPLE_THRESHOLD) {
+            // sample first N bytes to estimate
+            const sample = u8.slice(0, SAMPLE_SIZE);
+            const def = pako.deflate(sample);
+            const ratio = def.length / sample.length;
+            estimatedCompressedLength = Math.max(0, Math.floor(ratio * u8.length));
+          } else {
+            const def = pako.deflate(u8);
+            estimatedCompressedLength = def.length;
+          }
+          const orig = u8.length;
+          const saved = Math.max(0, orig - estimatedCompressedLength);
+          if (saved > 0) {
+            totalEstimatedSaved += saved;
+            candidates.push({ id: f.id, name: f.name, original: orig, estimated: estimatedCompressedLength, saved });
+          }
+        } catch (err) {
+          console.error('analyze error for file', f.name, err);
+        }
+      }
+      setAnalysisResult({ totalEstimatedSaved, candidates });
+      const mb = (totalEstimatedSaved / (1024*1024)).toFixed(2);
+      if (totalEstimatedSaved > 0) showNotification(`> analysis.estimated.reclaim.${mb}MB`, 'success');
+      else showNotification('> analysis.no.reclaimable.bytes.detected', 'info');
+      console.log('Compressibility analysis result:', { totalEstimatedSaved, candidates });
+    } finally {
+      setAnalysisRunning(false);
+    }
   }
 
   async function viewChecksum(file) {
@@ -4245,7 +4435,8 @@ function App() {
                       </div>
                     </div>
                     <div className="drawer-actions">
-                      <button className="drawer-btn" onClick={() => showNotification('> storage.optimization.complete', 'success')}>Optimize Storage</button>
+                      <button className="drawer-btn" onClick={optimizeVaultStorage} disabled={isOptimizing}>{isOptimizing ? 'Optimizing...' : 'Optimize Storage'}</button>
+                      <button className="drawer-btn" onClick={analyzeCompressibility} disabled={analysisRunning}>{analysisRunning ? 'Analyzing...' : 'Analyze Compression'}</button>
                       <button className="drawer-btn" onClick={backupVault}>Create Snapshot</button>
                       <button className="drawer-btn" onClick={() => restoreInputRef.current?.click()}>Open Restore</button>
                     </div>

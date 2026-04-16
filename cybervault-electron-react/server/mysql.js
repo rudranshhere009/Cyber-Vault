@@ -290,6 +290,15 @@ export async function getInsights(limit = 200) {
   };
 }
 
+export async function deleteUserById(userId) {
+  const numericId = Number(userId);
+  if (!Number.isInteger(numericId) || numericId <= 0) {
+    return { affectedRows: 0 };
+  }
+  const [result] = await pool.query('DELETE FROM users WHERE id = ?', [numericId]);
+  return { affectedRows: Number(result?.affectedRows || 0) };
+}
+
 export async function findAdminByUsername(username) {
   const [rows] = await pool.query('SELECT * FROM admin_users WHERE username = ? LIMIT 1', [username]);
   return rows[0] || null;

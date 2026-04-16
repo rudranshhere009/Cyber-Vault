@@ -26,6 +26,7 @@ function IrisModal({ mode, open, onClose, onRegistered, onAuthenticated }) {
         setLoading(true);
         setMessage('Loading iris detection modules...');
         
+        
         // Dynamically load iris detector (avoid top-level static import so dev server errors don't break the page)
         try {
           const mod = await import('../utils/irisDetection.js');

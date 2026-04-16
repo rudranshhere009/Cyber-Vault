@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import groqHandler from '../api/groq-ocr-answer.js';
 import {
   initMySqlSchema,
   findUserByEmail,
@@ -13,6 +14,7 @@ import {
   registerDevice,
   findDeviceByToken,
   getChangesSince,
+  deleteUserById,
   pool,
 } from './mysql.js';
 import bcrypt from 'bcrypt';
@@ -128,6 +130,17 @@ app.post('/api/admin/login', async (req, res) => {
   }
 });
 
+// Mount Groq OCR answer handler (serverless-style) for local web dev
+app.post('/api/groq-ocr-answer', async (req, res) => {
+  try {
+    // The handler expects (req, res) like a serverless function
+    return await groqHandler(req, res);
+  } catch (err) {
+    console.error('groq-ocr-answer handler error', err);
+    return res.status(500).json({ error: 'handler_exception', detail: String(err?.message || err) });
+  }
+});
+
 app.get('/api/insights', requireAdmin, async (req, res) => {
   try {
     const limit = Number(req.query.limit || 200);
@@ -135,6 +148,23 @@ app.get('/api/insights', requireAdmin, async (req, res) => {
     return res.json(insights);
   } catch (error) {
     return res.status(500).json({ error: 'insights_failed', detail: String(error?.message || error) });
+  }
+});
+
+app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'invalid_user_id' });
+    }
+
+    const result = await deleteUserById(id);
+    if (!result.affectedRows) {
+      return res.status(404).json({ error: 'user_not_found' });
+    }
+    return res.json({ ok: true, deletedUserId: id });
+  } catch (error) {
+    return res.status(500).json({ error: 'user_delete_failed', detail: String(error?.message || error) });
   }
 });
 

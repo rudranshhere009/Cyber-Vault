@@ -57,7 +57,50 @@ export default async function handler(req, res) {
 
   try {
     const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) return res.status(200).json({ error: 'missing_api_key' });
+    if (!apiKey) {
+      // Development fallback: attempt a simple extractive answer from an
+      // embedded document context if present in the question payload.
+      try {
+        const payloadBody = parseBody(req.body);
+        const questionRaw = String(payloadBody?.question || '').trim() || extractQuestionFromLegacyInput(payloadBody?.input);
+        if (questionRaw) {
+          // Look for the pattern used by the frontend when sending file-context
+          // questions: it includes an "Extracted text:" block and ends with "Question: ..."
+          const ctxMatch = questionRaw.match(/Extracted text:\s*([\s\S]{10,120000}?)\s*Question:/i);
+          const questionMatch = questionRaw.match(/Question:\s*([\s\S]{1,1000})$/i);
+          const context = ctxMatch ? ctxMatch[1].trim() : '';
+          const question = questionMatch ? questionMatch[1].trim() : (questionRaw || '');
+
+          if (context) {
+            const sentences = context.split(/[\r\n]+/).map(s => s.trim()).filter(Boolean);
+            const qTokens = question.toLowerCase().split(/\W+/).filter(Boolean);
+            const scores = sentences.map(s => {
+              const st = s.toLowerCase();
+              let score = 0;
+              for (const t of qTokens) if (t.length > 2 && st.includes(t)) score++;
+              return score;
+            });
+            const top = sentences
+              .map((s, i) => ({ s, score: scores[i] }))
+              .filter(x => x.score > 0)
+              .sort((a, b) => b.score - a.score)
+              .slice(0, 3)
+              .map(x => x.s);
+
+            if (top.length) {
+              const out = `Local fallback answer (extract from document): ${top.join(' ')}\n\n(Development fallback — configure GROQ_API_KEY for full AI answers)`;
+              return res.status(200).json({ data: { output_text: out } });
+            }
+
+            const out = `Local fallback: no matching content found in document for your question. (Set GROQ_API_KEY to enable AI answers)`;
+            return res.status(200).json({ data: { output_text: out } });
+          }
+        }
+      } catch (e) {
+        // ignore and fall through to missing_api_key response
+      }
+      return res.status(200).json({ error: 'missing_api_key' });
+    }
 
     const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
     const payload = parseBody(req.body);
